@@ -1,0 +1,949 @@
+﻿{% extends "base.html" %}
+{% block title %}{{ tr.get('gallery_title', 'Gallery') if tr else 'Gallery' }} - {{ tr['app_name'] if tr else 'CaptureLapse' }}{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap gap-3 align-items-center">
+  <h2 class="mb-0"><i class="fa-solid fa-images me-2"></i>{{ tr.get('gallery_title', 'Gallery') if tr else 'Gallery' }}</h2>
+</div>
+<hr class="mx-auto">
+
+<div class="gallery-toolbar px-3">
+  <form class="row g-3 align-items-end mb-4 gallery-filter-form" method="get" action="/gallery">
+    <div class="col-6 col-md-2">
+      <label class="form-label">{{ tr.get('gallery_filter_from', 'From') if tr else 'From' }}</label>
+      <input type="date" class="form-control" name="date_from" value="{{ filters.date_from }}">
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">{{ tr.get('gallery_filter_to', 'To') if tr else 'To' }}</label>
+      <input type="date" class="form-control" name="date_to" value="{{ filters.date_to }}">
+    </div>
+    <div class="col-6 col-md-1">
+      <label class="form-label">{{ tr.get('gallery_filter_limit', 'Limit') if tr else 'Limit' }}</label>
+      <select class="form-select" name="limit">
+        {% for v in [50, 100, 200, 500, 1000, 2000] %}
+        <option value="{{ v }}" {% if filters.limit == v %}selected{% endif %}>{{ v }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">{{ tr.get('gallery_filter_sort', 'Sort') if tr else 'Sort' }}</label>
+      <select class="form-select" name="sort">
+        <option value="desc" {% if filters.sort == 'desc' %}selected{% endif %}>{{ tr.get('gallery_sort_desc', 'Newest first') if tr else 'Newest first' }}</option>
+        <option value="asc" {% if filters.sort == 'asc' %}selected{% endif %}>{{ tr.get('gallery_sort_asc', 'Oldest first') if tr else 'Oldest first' }}</option>
+      </select>
+    </div>
+    <input type="hidden" name="page" value="1">
+    <div class="col-12 col-md-1 d-grid">
+      <button class="btn btn-outline-secondary" type="submit">{{ tr.get('gallery_filter_apply', 'Apply') if tr else 'Apply' }}</button>
+    </div>
+  </form>
+  <div class="gallery-clear-wrap d-flex flex-wrap gap-3 align-items-center pb-2">
+    <div class="text-muted small" id="gallery-total-count" data-count="{{ filters.total_items }}">
+      {{ tr.get('gallery_total_images', 'Images total') if tr else 'Images total' }}:
+      <span class="value">{{ filters.total_items }}</span>
+    </div>
+    <div id="gallery-selection"
+         class="text-muted small"
+         data-empty-text="{{ tr.get('gallery_selection_hint', 'Select start and end to define a range.') if tr else 'Select start and end to define a range.' }}"
+         data-start-label="{{ tr.get('gallery_start_label', 'Start') if tr else 'Start' }}"
+         data-end-label="{{ tr.get('gallery_end_label', 'End') if tr else 'End' }}"
+         data-sort="{{ filters.sort }}"
+         data-total-items="{{ filters.total_items }}"
+         data-all-start="{{ range_all.start if range_all else '' }}"
+         data-all-end="{{ range_all.end if range_all else '' }}"
+         data-all-start-ts="{{ range_all.start_ts if range_all else '' }}"
+         data-all-end-ts="{{ range_all.end_ts if range_all else '' }}"></div>
+    <button id="gallery-select-all" class="btn btn-sm btn-outline-secondary" type="button" {% if not range_all %}disabled{% endif %}>
+      {{ tr.get('gallery_select_all', 'Select all') if tr else 'Select all' }}
+    </button>
+    <button id="gallery-clear-selection" class="btn btn-sm btn-outline-secondary" type="button">
+      {{ tr.get('gallery_clear_selection', 'Clear selection') if tr else 'Clear selection' }}
+    </button>
+    <button id="gallery-delete-selected" class="btn btn-sm btn-outline-danger" type="button" disabled>
+      {{ tr.get('gallery_delete_selected', 'Delete selected') if tr else 'Delete selected' }}
+    </button>
+    <div class="dropdown ms-auto">
+      <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        {{ tr.get('gallery_timelapse_menu', 'Timelapse') if tr else 'Timelapse' }}
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li>
+          <button id="gallery-timelapse-settings" class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#timelapseModal">
+            {{ tr.get('gallery_timelapse_settings', 'Timelapse settings') if tr else 'Timelapse settings' }}
+          </button>
+        </li>
+        <li>
+          <button id="gallery-create-timelapse" class="dropdown-item" type="button">
+            {{ tr.get('gallery_create_timelapse', 'Create timelapse') if tr else 'Create timelapse' }}
+          </button>
+        </li>
+        <li>
+          <a id="gallery-timelapse-download" class="dropdown-item disabled" href="#" download aria-disabled="true" tabindex="-1">
+            {{ tr.get('gallery_timelapse_download', 'Download timelapse') if tr else 'Download timelapse' }}
+          </a>
+        </li>
+        <li>
+          <button id="gallery-timelapse-delete" class="dropdown-item text-danger" type="button" disabled>
+            {{ tr.get('gallery_timelapse_delete', 'Delete timelapse') if tr else 'Delete timelapse' }}
+          </button>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+{% if items %}
+<div class="gallery-grid">
+  {% for item in items %}
+  <div class="gallery-card" data-index="{{ loop.index0 }}" data-ts="{{ item.ts }}" data-name="{{ item.name }}">
+    <button class="gallery-thumb" type="button" data-full="/pictures/{{ item.name }}" aria-label="{{ item.name }}">
+      <img src="/pictures/{{ item.name }}" alt="{{ item.name }}" loading="lazy">
+    </button>
+    <span class="gallery-badge gallery-badge-start">{{ tr.get('gallery_range_start', 'Start') if tr else 'Start' }}</span>
+    <span class="gallery-badge gallery-badge-end">{{ tr.get('gallery_range_end', 'End') if tr else 'End' }}</span>
+    <button class="gallery-action gallery-mark-range" type="button" data-pick="{{ item.name }}" title="{{ tr.get('gallery_pick_first', 'Pick first') if tr else 'Pick first' }}">
+      {{ tr.get('gallery_pick_first', 'Pick first') if tr else 'Pick first' }}
+    </button>
+    <button class="gallery-delete" type="button" data-delete="{{ item.name }}" aria-label="{{ tr.get('gallery_delete_aria', 'Delete image') if tr else 'Delete image' }}" title="{{ tr.get('gallery_delete_title', 'Delete') if tr else 'Delete' }}">
+      <i class="fa-solid fa-trash"></i>
+    </button>
+    <div class="gallery-meta">
+      <div class="gallery-name">{{ item.name }}</div>
+      <div class="gallery-time">{{ item.timestamp }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+<div id="gallery-lightbox" class="gallery-lightbox" aria-hidden="true">
+  <div class="gallery-lightbox-backdrop"></div>
+  <button class="gallery-lightbox-close" type="button" aria-label="Close">×</button>
+  <img id="gallery-lightbox-img" alt="">
+</div>
+<div class="gallery-pagination mt-4 d-flex flex-wrap gap-2 justify-content-center align-items-center">
+  {% set current_page = filters.page %}
+  {% set total_pages = filters.total_pages %}
+  {% set prev_page = current_page - 1 %}
+  {% set next_page = current_page + 1 %}
+  {% set window = 3 %}
+  {% set start_page = current_page - window %}
+  {% set end_page = current_page + window %}
+  {% if start_page < 1 %}{% set start_page = 1 %}{% endif %}
+  {% if end_page > total_pages %}{% set end_page = total_pages %}{% endif %}
+
+  <a class="btn btn-outline-secondary {% if current_page <= 1 %}disabled{% endif %}"
+     href="/gallery?date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&limit={{ filters.limit }}&sort={{ filters.sort }}&page=1">
+     ««
+  </a>
+  <a class="btn btn-outline-secondary {% if current_page <= 1 %}disabled{% endif %}"
+     href="/gallery?date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&limit={{ filters.limit }}&sort={{ filters.sort }}&page={{ prev_page }}">
+     «
+  </a>
+
+  {% if start_page > 1 %}
+    <a class="btn btn-outline-secondary" href="/gallery?date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&limit={{ filters.limit }}&sort={{ filters.sort }}&page=1">1</a>
+    <span class="text-muted">…</span>
+  {% endif %}
+
+  {% for p in range(start_page, end_page + 1) %}
+    <a class="btn {% if p == current_page %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+       href="/gallery?date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&limit={{ filters.limit }}&sort={{ filters.sort }}&page={{ p }}">{{ p }}</a>
+  {% endfor %}
+
+  {% if end_page < total_pages %}
+    <span class="text-muted">…</span>
+    <a class="btn btn-outline-secondary" href="/gallery?date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&limit={{ filters.limit }}&sort={{ filters.sort }}&page={{ total_pages }}">{{ total_pages }}</a>
+  {% endif %}
+
+  <a class="btn btn-outline-secondary {% if current_page >= total_pages %}disabled{% endif %}"
+     href="/gallery?date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&limit={{ filters.limit }}&sort={{ filters.sort }}&page={{ next_page }}">
+     »
+  </a>
+  <a class="btn btn-outline-secondary {% if current_page >= total_pages %}disabled{% endif %}"
+     href="/gallery?date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&limit={{ filters.limit }}&sort={{ filters.sort }}&page={{ total_pages }}">
+     »»
+  </a>
+</div>
+{% else %}
+<div class="text-muted">{{ tr.get('gallery_empty', 'No images found for the selected filters.') if tr else 'No images found for the selected filters.' }}</div>
+{% endif %}
+
+<div class="modal fade" id="timelapseModal" tabindex="-1" aria-labelledby="timelapseModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="timelapseModalLabel">{{ tr.get('gallery_timelapse_settings', 'Timelapse settings') if tr else 'Timelapse settings' }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ tr.get('close', 'Close') if tr else 'Close' }}"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">{{ tr.get('gallery_timelapse_fps', 'FPS') if tr else 'FPS' }}</label>
+          <input type="number" class="form-control" id="timelapse-fps" min="1" max="120" value="25">
+        </div>
+        <hr>
+        <div class="mb-3">
+          <label class="form-label d-flex justify-content-between">
+            <span>
+              {{ tr.get('gallery_timelapse_quality', 'Quality (CRF)') if tr else 'Quality (CRF)' }}
+              <a class="ms-1 small" href="https://trac.ffmpeg.org/wiki/Encode/H.264#a1.ChooseaCRFvalue" target="_blank" rel="noopener noreferrer">CRF?</a>
+            </span>
+            <span class="text-muted small" id="timelapse-crf-label">23</span>
+          </label>
+          <input type="range" class="form-range" id="timelapse-crf" min="0" max="51" step="1" value="23">
+          <div class="form-text">{{ tr.get('gallery_timelapse_quality_hint', 'Lower is higher quality (larger files).') if tr else 'Lower is higher quality (larger files).' }}</div>
+        </div>
+        <hr>
+        <div class="mt-2">
+          <label class="form-label">{{ tr.get('gallery_timelapse_resolution_presets', 'Resolution presets') if tr else 'Resolution presets' }}</label>
+          <div class="d-flex flex-wrap gap-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-preset="2160p">4K (2160p)</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-preset="1440p">1440p</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-preset="1080p">1080p</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-preset="720p">720p</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-preset="480p">480p</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-preset="orig">{{ tr.get('gallery_timelapse_preset_original', 'Original size') if tr else 'Original size' }}</button>
+          </div>
+        </div>
+        <div class="row g-2 mt-2">
+          <div class="col">
+            <label class="form-label">{{ tr.get('gallery_timelapse_width', 'Width') if tr else 'Width' }}</label>
+            <input type="number" class="form-control" id="timelapse-width" min="1" placeholder="1920">
+          </div>
+          <div class="col">
+            <label class="form-label">{{ tr.get('gallery_timelapse_height', 'Height') if tr else 'Height' }}</label>
+            <input type="number" class="form-control" id="timelapse-height" min="1" placeholder="1080">
+          </div>
+        </div>
+        <hr>
+        <div class="mt-2">
+          <label class="form-label d-flex justify-content-between">
+            <span>{{ tr.get('gallery_timelapse_preset', 'Preset') if tr else 'Preset' }}</span>
+            <span class="text-muted small">{{ tr.get('gallery_timelapse_preset_hint', 'Slower = better compression, faster = less CPU') if tr else 'Slower = better compression, faster = less CPU' }}</span>
+          </label>
+          <select class="form-select" id="timelapse-preset">
+            {% for p in ['ultrafast','superfast','veryfast','faster','fast','medium','slow','slower','veryslow'] %}
+            <option value="{{ p }}" {% if p == 'medium' %}selected{% endif %}>{{ p }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-text mt-2">{{ tr.get('gallery_timelapse_scale_hint', 'Leave width/height empty to keep original size.') if tr else 'Leave width/height empty to keep original size.' }}</div>
+      </div>
+      <div class="modal-footer">
+        <div class="text-muted small me-auto" id="timelapse-length">
+          {{ tr.get('gallery_timelapse_length', 'Length') if tr else 'Length' }}: —
+        </div>
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ tr.get('close', 'Close') if tr else 'Close' }}</button>
+        <button type="button" class="btn btn-outline-secondary" id="timelapse-reset">{{ tr.get('gallery_timelapse_reset', 'Reset') if tr else 'Reset' }}</button>
+        <button type="button" class="btn btn-success" id="timelapse-save-settings">{{ tr.get('save', 'Save') if tr else 'Save' }}</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    const lightbox = document.getElementById('gallery-lightbox');
+    const lightboxImg = document.getElementById('gallery-lightbox-img');
+    if (!lightbox || !lightboxImg) return;
+
+    function closeLightbox() {
+      lightbox.classList.remove('is-open');
+      lightbox.setAttribute('aria-hidden', 'true');
+      lightboxImg.src = '';
+      lightboxImg.alt = '';
+    }
+
+    document.addEventListener('click', (event) => {
+      if (event.target.closest('.gallery-delete') || event.target.closest('.gallery-action')) {
+        return;
+      }
+      const thumb = event.target.closest('.gallery-thumb');
+      if (!thumb || !thumb.dataset.full) return;
+      lightboxImg.src = thumb.dataset.full;
+      lightboxImg.alt = thumb.getAttribute('aria-label') || '';
+      lightbox.classList.add('is-open');
+      lightbox.setAttribute('aria-hidden', 'false');
+    });
+
+    document.addEventListener('click', (event) => {
+      if (event.target.classList.contains('gallery-lightbox-backdrop') ||
+          event.target.classList.contains('gallery-lightbox-close')) {
+        closeLightbox();
+      }
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        closeLightbox();
+      }
+    });
+
+    document.addEventListener('click', async (event) => {
+      const delBtn = event.target.closest('.gallery-delete');
+      if (!delBtn) return;
+      const filename = delBtn.dataset.delete;
+      if (!filename) return;
+      const confirmMsg = '{{ tr.get("gallery_delete_confirm", "Delete this image?") if tr else "Delete this image?" }}';
+      if (!window.confirm(confirmMsg)) {
+        return;
+      }
+      try {
+        const res = await fetch(`/pictures/${encodeURIComponent(filename)}`, { method: 'DELETE' });
+        if (!res.ok) {
+          throw new Error(`Delete failed: ${res.status}`);
+        }
+        const name = delBtn.dataset.delete;
+        if (name) {
+          if (range.start === name) {
+            range.start = null;
+            range.start_ts = null;
+          }
+          if (range.end === name) {
+            range.end = null;
+            range.end_ts = null;
+          }
+          saveRange(range);
+          updateRangeUI(range);
+        }
+        const card = delBtn.closest('.gallery-card');
+        if (card) card.remove();
+        if (window.CaptureLapse && window.CaptureLapse.showAlert) {
+          window.CaptureLapse.showAlert(statusTarget, {
+            message: '{{ tr.get("gallery_delete_success", "Image deleted.") if tr else "Image deleted." }}',
+            type: 'success',
+            dismissMs: 2500,
+            closable: false,
+            className: 'py-2 px-3 mb-0',
+          });
+        }
+      } catch (err) {
+        if (window.CaptureLapse && window.CaptureLapse.showAlert) {
+          window.CaptureLapse.showAlert(statusTarget, {
+            message: '{{ tr.get("gallery_delete_failed", "Delete failed.") if tr else "Delete failed." }}',
+            type: 'danger',
+            dismissMs: 4000,
+            closable: false,
+            className: 'py-2 px-3 mb-0',
+          });
+        }
+      }
+    });
+
+    const cards = Array.from(document.querySelectorAll('.gallery-card'));
+    const selectionBox = document.getElementById('gallery-selection');
+    const totalCountBox = document.getElementById('gallery-total-count');
+    const startLabel = selectionBox ? selectionBox.dataset.startLabel : 'Start';
+    const endLabel = selectionBox ? selectionBox.dataset.endLabel : 'End';
+    const emptyText = selectionBox ? selectionBox.dataset.emptyText : '';
+    const clearBtn = document.getElementById('gallery-clear-selection');
+    const deleteSelectedBtn = document.getElementById('gallery-delete-selected');
+    const selectAllBtn = document.getElementById('gallery-select-all');
+    const pickButtons = Array.from(document.querySelectorAll('.gallery-mark-range'));
+    const storageKey = 'capturelapse_gallery_range';
+    const createBtn = document.getElementById('gallery-create-timelapse');
+    const pickFirstLabel = '{{ tr.get("gallery_pick_first", "Pick first") if tr else "Pick first" }}';
+    const pickLastLabel = '{{ tr.get("gallery_pick_last", "Pick last") if tr else "Pick last" }}';
+    const deleteSelectedLabel = '{{ tr.get("gallery_delete_selected", "Delete selected") if tr else "Delete selected" }}';
+    const deleteSelectedConfirm = '{{ tr.get("gallery_delete_selected_confirm", "Delete selected images?") if tr else "Delete selected images?" }}';
+    const deleteSelectedSuccess = '{{ tr.get("gallery_delete_selected_success", "Selected images deleted.") if tr else "Selected images deleted." }}';
+    const deleteSelectedFailed = '{{ tr.get("gallery_delete_selected_failed", "Failed to delete selected images.") if tr else "Failed to delete selected images." }}';
+    const deleteSelectedEmpty = '{{ tr.get("gallery_delete_selected_empty", "No images selected.") if tr else "No images selected." }}';
+
+    function loadRange() {
+      try {
+        const raw = localStorage.getItem(storageKey);
+        if (!raw) return { start: null, end: null };
+        const data = JSON.parse(raw);
+        return {
+          start: data && data.start ? data.start : null,
+          end: data && data.end ? data.end : null,
+          start_ts: data && data.start_ts ? data.start_ts : null,
+          end_ts: data && data.end_ts ? data.end_ts : null,
+        };
+      } catch (err) {
+        return { start: null, end: null };
+      }
+    }
+
+    function saveRange(range) {
+      localStorage.setItem(storageKey, JSON.stringify(range));
+    }
+
+    function findCardByName(name) {
+      if (!name) return null;
+      return document.querySelector(`.gallery-card[data-name="${CSS.escape(name)}"]`);
+    }
+
+    function updateRangeUI(range) {
+      cards.forEach((card) => {
+        card.classList.remove('is-selected', 'is-start', 'is-end');
+      });
+      let startCard = findCardByName(range.start);
+      let endCard = findCardByName(range.end);
+      if (startCard && !range.start_ts) {
+        range.start_ts = Number(startCard.dataset.ts);
+      }
+      if (endCard && !range.end_ts) {
+        range.end_ts = Number(endCard.dataset.ts);
+      }
+      if (startCard) startCard.classList.add('is-start');
+      if (endCard) endCard.classList.add('is-end');
+
+      if (range.start && range.end && range.start_ts && range.end_ts) {
+        const lowTs = Math.min(Number(range.start_ts), Number(range.end_ts));
+        const highTs = Math.max(Number(range.start_ts), Number(range.end_ts));
+        cards.forEach((card) => {
+          const ts = Number(card.dataset.ts);
+          if (!Number.isNaN(ts) && ts >= lowTs && ts <= highTs) {
+            card.classList.add('is-selected');
+          }
+        });
+      } else if (startCard) {
+        startCard.classList.add('is-selected');
+      } else if (endCard) {
+        endCard.classList.add('is-selected');
+      }
+
+      if (selectionBox) {
+        if (range.start || range.end) {
+          selectionBox.textContent = `${startLabel}: ${range.start || '—'} · ${endLabel}: ${range.end || '—'}`;
+        } else {
+          selectionBox.textContent = emptyText || '';
+        }
+      }
+      if (clearBtn) {
+        if (range.start || range.end) {
+          clearBtn.classList.add('is-visible');
+        } else {
+          clearBtn.classList.remove('is-visible');
+        }
+      }
+      if (deleteSelectedBtn) {
+        if (range.start || range.end) {
+          deleteSelectedBtn.disabled = false;
+          deleteSelectedBtn.classList.add('is-visible');
+        } else {
+          deleteSelectedBtn.disabled = true;
+          deleteSelectedBtn.classList.remove('is-visible');
+        }
+      }
+      const pickLabel = range.start && !range.end ? pickLastLabel : pickFirstLabel;
+      pickButtons.forEach((btn) => {
+        btn.textContent = pickLabel;
+        btn.setAttribute('title', pickLabel);
+      });
+    }
+
+    const statusTarget = document.getElementById('gallery-status') || document.getElementById('global-status');
+    let statusAlert = null;
+    let statusDismissTimer = null;
+
+    function showStatus(message, type, { sticky = false } = {}) {
+      if (!statusTarget) return;
+      if (!statusAlert) {
+        statusTarget.innerHTML = '';
+        statusAlert = document.createElement('div');
+        statusAlert.className = 'alert fade show py-2 px-3 mb-0';
+        statusAlert.role = 'alert';
+        statusTarget.appendChild(statusAlert);
+      }
+      statusAlert.textContent = message;
+      statusAlert.classList.remove('alert-info', 'alert-success', 'alert-warning', 'alert-danger');
+      statusAlert.classList.add(`alert-${type || 'info'}`);
+      if (statusDismissTimer) {
+        clearTimeout(statusDismissTimer);
+        statusDismissTimer = null;
+      }
+      if (!sticky) {
+        statusDismissTimer = setTimeout(() => {
+          if (statusAlert) {
+            statusAlert.remove();
+            statusAlert = null;
+          }
+        }, 2500);
+      }
+    }
+
+    function showGlobalStatus(message, type, { sticky = false } = {}) {
+      if (window.CaptureLapse && window.CaptureLapse.showGlobalStatus) {
+        window.CaptureLapse.showGlobalStatus(message, type, { sticky });
+      }
+    }
+
+    let range = loadRange();
+    updateRangeUI(range);
+    updateTimelapseLength();
+
+    document.addEventListener('click', (event) => {
+      const btn = event.target.closest('.gallery-mark-range');
+      if (!btn) return;
+      const card = btn.closest('.gallery-card');
+      if (!card) return;
+      const name = card.dataset.name;
+      const ts = Number(card.dataset.ts);
+      if (!name || Number.isNaN(ts)) return;
+
+      // Range-click: first click sets start, second click sets end, order auto-normalizes.
+      if (!range.start || (range.start && range.end)) {
+        range.start = name;
+        range.start_ts = ts;
+        range.end = null;
+        range.end_ts = null;
+      } else {
+        range.end = name;
+        range.end_ts = ts;
+      }
+
+      if (range.start && range.end && range.start_ts && range.end_ts) {
+        if (Number(range.start_ts) > Number(range.end_ts)) {
+          const tmpName = range.start;
+          const tmpTs = range.start_ts;
+          range.start = range.end;
+          range.start_ts = range.end_ts;
+          range.end = tmpName;
+          range.end_ts = tmpTs;
+        }
+      }
+      saveRange(range);
+      updateRangeUI(range);
+      updateTimelapseLength();
+    });
+
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        range = { start: null, end: null, start_ts: null, end_ts: null };
+        saveRange(range);
+        updateRangeUI(range);
+        updateTimelapseLength();
+      });
+    }
+    if (deleteSelectedBtn) {
+      deleteSelectedBtn.addEventListener('click', async () => {
+        const selectedCards = cards.filter((card) => card.classList.contains('is-selected'));
+        const selectedName = range.start || range.end;
+        if (!selectedName) {
+          showStatus(deleteSelectedEmpty, 'warning');
+          return;
+        }
+        const startName = range.start || range.end;
+        const endName = range.end || range.start;
+        let count = selectedCards.length || 0;
+        const allStart = selectionBox ? selectionBox.dataset.allStart : '';
+        const allEnd = selectionBox ? selectionBox.dataset.allEnd : '';
+        const totalItems = selectionBox ? Number(selectionBox.dataset.totalItems || '') : NaN;
+        if (startName && endName && allStart && allEnd && startName === allStart && endName === allEnd && Number.isFinite(totalItems)) {
+          count = totalItems;
+        } else {
+          try {
+            const res = await fetch('/gallery/range-count', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ start: startName, end: endName }),
+            });
+            if (res.ok) {
+              const data = await res.json();
+              if (data && typeof data.count === 'number') {
+                count = data.count;
+              }
+            }
+          } catch (err) {}
+        }
+        if (!count) {
+          showStatus(deleteSelectedEmpty, 'warning');
+          return;
+        }
+        const confirmMsg = deleteSelectedConfirm.replace('{count}', String(count));
+        if (!window.confirm(confirmMsg)) {
+          return;
+        }
+        deleteSelectedBtn.disabled = true;
+        let deletedCount = 0;
+        let failed = false;
+        try {
+          const res = await fetch('/gallery/delete-range', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ start: startName, end: endName }),
+          });
+          if (!res.ok) {
+            throw new Error('delete_failed');
+          }
+          const data = await res.json();
+          deletedCount = typeof data.deleted === 'number' ? data.deleted : 0;
+          failed = typeof data.failed === 'number' ? data.failed > 0 : false;
+        } catch (err) {
+          failed = true;
+        }
+        if (!failed) {
+          selectedCards.forEach((card) => card.remove());
+          if (totalCountBox) {
+            const currentCount = Number(totalCountBox.dataset.count || '');
+            if (Number.isFinite(currentCount)) {
+              const nextCount = Math.max(0, currentCount - deletedCount);
+              totalCountBox.dataset.count = String(nextCount);
+              const valueEl = totalCountBox.querySelector('.value');
+              if (valueEl) valueEl.textContent = String(nextCount);
+            }
+          }
+        }
+        range = { start: null, end: null, start_ts: null, end_ts: null };
+        saveRange(range);
+        updateRangeUI(range);
+        showStatus(failed ? deleteSelectedFailed : deleteSelectedSuccess, failed ? 'danger' : 'success');
+      });
+    }
+    if (selectAllBtn) {
+      selectAllBtn.addEventListener('click', () => {
+        if (!selectionBox) return;
+        const allStart = selectionBox.dataset.allStart || '';
+        const allEnd = selectionBox.dataset.allEnd || '';
+        const allStartTs = Number(selectionBox.dataset.allStartTs || '');
+        const allEndTs = Number(selectionBox.dataset.allEndTs || '');
+        if (!allStart || !allEnd || Number.isNaN(allStartTs) || Number.isNaN(allEndTs)) {
+          showStatus('{{ tr.get("gallery_select_all_empty", "No images available to select.") if tr else "No images available to select." }}', 'warning');
+          return;
+        }
+        range = {
+          start: allStart,
+          end: allEnd,
+          start_ts: allStartTs,
+          end_ts: allEndTs,
+        };
+        saveRange(range);
+        updateRangeUI(range);
+        updateTimelapseLength();
+      });
+    }
+
+    const settingsBtn = document.getElementById('gallery-timelapse-settings');
+    const downloadBtn = document.getElementById('gallery-timelapse-download');
+    const deleteBtn = document.getElementById('gallery-timelapse-delete');
+    const watchKey = 'capturelapse_timelapse_watch';
+    const fpsInput = document.getElementById('timelapse-fps');
+    const lengthEl = document.getElementById('timelapse-length');
+    const crfInput = document.getElementById('timelapse-crf');
+    const crfLabel = document.getElementById('timelapse-crf-label');
+    const widthInput = document.getElementById('timelapse-width');
+    const heightInput = document.getElementById('timelapse-height');
+    const presetSelect = document.getElementById('timelapse-preset');
+    const settingsSave = document.getElementById('timelapse-save-settings');
+    const settingsReset = document.getElementById('timelapse-reset');
+    const lengthLabel = '{{ tr.get("gallery_timelapse_length", "Length") if tr else "Length" }}';
+    const lengthUnknown = '{{ tr.get("gallery_timelapse_length_unknown", "Select images to see length") if tr else "Select images to see length" }}';
+    const settingsKey = 'capturelapse_timelapse_settings';
+    const presetButtons = Array.from(document.querySelectorAll('[data-preset]'));
+
+    function applyCrfLabel() {
+      if (crfLabel && crfInput) {
+        crfLabel.textContent = crfInput.value || '23';
+      }
+    }
+
+    function loadSettings() {
+      try {
+        const raw = localStorage.getItem(settingsKey);
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        if (fpsInput && data.fps) fpsInput.value = data.fps;
+        if (crfInput && data.crf !== undefined) crfInput.value = data.crf;
+        if (widthInput && data.width) widthInput.value = data.width;
+        if (heightInput && data.height) heightInput.value = data.height;
+        if (presetSelect && data.preset) presetSelect.value = data.preset;
+        applyCrfLabel();
+      } catch (err) {}
+    }
+
+    function saveSettings() {
+      const settings = {
+        fps: fpsInput ? Number(fpsInput.value || 25) : 25,
+        crf: crfInput ? Number(crfInput.value || 23) : 23,
+        width: widthInput ? (widthInput.value || '') : '',
+        height: heightInput ? (heightInput.value || '') : '',
+        preset: presetSelect ? (presetSelect.value || 'medium') : 'medium',
+      };
+      localStorage.setItem(settingsKey, JSON.stringify(settings));
+      return settings;
+    }
+
+    function formatDuration(totalSeconds) {
+      if (!Number.isFinite(totalSeconds) || totalSeconds < 0) return '—';
+      const rounded = Math.max(0, Math.round(totalSeconds));
+      const hours = Math.floor(rounded / 3600);
+      const minutes = Math.floor((rounded % 3600) / 60);
+      const seconds = rounded % 60;
+      if (hours > 0) {
+        return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      }
+      return `${minutes}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    async function updateTimelapseLength() {
+      if (!lengthEl) return;
+      if (!range.start && !range.end) {
+        lengthEl.textContent = `${lengthLabel}: ${lengthUnknown}`;
+        return;
+      }
+      const startName = range.start || range.end;
+      const endName = range.end || range.start;
+      let count = 0;
+      const allStart = selectionBox ? selectionBox.dataset.allStart : '';
+      const allEnd = selectionBox ? selectionBox.dataset.allEnd : '';
+      const totalItems = selectionBox ? Number(selectionBox.dataset.totalItems || '') : NaN;
+      if (startName && endName && allStart && allEnd && startName === allStart && endName === allEnd && Number.isFinite(totalItems)) {
+        count = totalItems;
+      } else if (startName && endName) {
+        try {
+          const res = await fetch('/gallery/range-count', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ start: startName, end: endName }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data && typeof data.count === 'number') {
+              count = data.count;
+            }
+          }
+        } catch (err) {}
+      }
+      const fps = Number(fpsInput ? fpsInput.value : 25) || 25;
+      const seconds = count > 0 ? count / fps : 0;
+      lengthEl.textContent = `${lengthLabel}: ${formatDuration(seconds)}`;
+    }
+
+    function resetSettings() {
+      if (fpsInput) fpsInput.value = 25;
+      if (crfInput) crfInput.value = 23;
+      if (widthInput) widthInput.value = '';
+      if (heightInput) heightInput.value = '';
+      if (presetSelect) presetSelect.value = 'medium';
+      applyCrfLabel();
+      saveSettings();
+    }
+
+    if (settingsSave) {
+      settingsSave.addEventListener('click', () => {
+        saveSettings();
+        if (window.bootstrap) {
+          const modal = window.bootstrap.Modal.getInstance(document.getElementById('timelapseModal'));
+          if (modal) modal.hide();
+        }
+      });
+    }
+
+    if (settingsReset) {
+      settingsReset.addEventListener('click', resetSettings);
+    }
+    if (settingsBtn) {
+      settingsBtn.addEventListener('click', () => {
+        updateTimelapseLength();
+      });
+    }
+    if (crfInput) {
+      crfInput.addEventListener('input', applyCrfLabel);
+    }
+    if (fpsInput) {
+      fpsInput.addEventListener('input', updateTimelapseLength);
+    }
+    presetButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const preset = btn.dataset.preset;
+        if (preset === '2160p') {
+          if (widthInput) widthInput.value = 3840;
+          if (heightInput) heightInput.value = 2160;
+        } else if (preset === '1440p') {
+          if (widthInput) widthInput.value = 2560;
+          if (heightInput) heightInput.value = 1440;
+        } else if (preset === '1080p') {
+          if (widthInput) widthInput.value = 1920;
+          if (heightInput) heightInput.value = 1080;
+        } else if (preset === '720p') {
+          if (widthInput) widthInput.value = 1280;
+          if (heightInput) heightInput.value = 720;
+        } else if (preset === '480p') {
+          if (widthInput) widthInput.value = 854;
+          if (heightInput) heightInput.value = 480;
+        } else if (preset === 'orig') {
+          if (widthInput) widthInput.value = '';
+          if (heightInput) heightInput.value = '';
+        }
+      });
+    });
+
+    loadSettings();
+    startStatusPolling();
+
+    function startStatusPolling() {
+      const statusEl = document.getElementById('gallery-status') || document.getElementById('global-status');
+      const useLocalStatus = !(window.CaptureLapse && window.CaptureLapse.timelapseGlobalStatusActive);
+      const statusLabel = {
+        running: '{{ tr.get("gallery_timelapse_status_running", "Timelapse running...") if tr else "Timelapse running..." }}',
+        done: '{{ tr.get("gallery_timelapse_status_done", "Timelapse finished.") if tr else "Timelapse finished." }}',
+        error: '{{ tr.get("gallery_timelapse_status_error", "Timelapse failed.") if tr else "Timelapse failed." }}',
+      };
+      let lastOutput = null;
+      const poll = async () => {
+        try {
+          const res = await fetch('/timelapse/status');
+          if (!res.ok) return;
+          const data = await res.json();
+          if (data.state === 'running') {
+            const percent = typeof data.progress === 'number' ? Math.max(0, Math.min(100, data.progress)) : null;
+            const suffix = percent !== null ? ` ${percent}%` : '';
+            if (useLocalStatus) {
+              showStatus(`${statusLabel.running}${suffix}`, 'info', { sticky: true });
+            }
+            sessionStorage.setItem(watchKey, '1');
+            if (downloadBtn) {
+              downloadBtn.classList.add('disabled');
+              downloadBtn.setAttribute('aria-disabled', 'true');
+              downloadBtn.setAttribute('tabindex', '-1');
+              downloadBtn.href = '#';
+            }
+            if (deleteBtn) deleteBtn.disabled = true;
+            if (createBtn) createBtn.disabled = true;
+            setTimeout(poll, 3000);
+            return;
+          }
+          const shouldNotify = sessionStorage.getItem(watchKey) === '1';
+          if (data.state === 'done') {
+            if (shouldNotify) {
+              if (useLocalStatus) {
+                showStatus(statusLabel.done, 'success');
+              }
+            }
+            sessionStorage.removeItem(watchKey);
+            lastOutput = data.output || null;
+            if (downloadBtn && data.output) {
+              downloadBtn.href = `/timelapse/download/${encodeURIComponent(data.output)}`;
+              downloadBtn.classList.remove('disabled');
+              downloadBtn.removeAttribute('aria-disabled');
+              downloadBtn.removeAttribute('tabindex');
+            } else if (downloadBtn) {
+              downloadBtn.classList.add('disabled');
+              downloadBtn.setAttribute('aria-disabled', 'true');
+              downloadBtn.setAttribute('tabindex', '-1');
+              downloadBtn.href = '#';
+            }
+            if (deleteBtn && data.has_output) {
+              deleteBtn.disabled = false;
+            } else if (deleteBtn) {
+              deleteBtn.disabled = true;
+            }
+            if (createBtn) createBtn.disabled = false;
+            return;
+          }
+          if (data.state === 'error') {
+            if (shouldNotify) {
+              if (useLocalStatus) {
+                showStatus(statusLabel.error, 'danger');
+              }
+            }
+            sessionStorage.removeItem(watchKey);
+            if (downloadBtn) {
+              downloadBtn.classList.add('disabled');
+              downloadBtn.setAttribute('aria-disabled', 'true');
+              downloadBtn.setAttribute('tabindex', '-1');
+              downloadBtn.href = '#';
+            }
+            if (deleteBtn) deleteBtn.disabled = true;
+            if (createBtn) createBtn.disabled = false;
+            return;
+          }
+          lastOutput = data.output || null;
+          if (downloadBtn && data.has_output && data.output) {
+            downloadBtn.href = `/timelapse/download/${encodeURIComponent(data.output)}`;
+            downloadBtn.classList.remove('disabled');
+            downloadBtn.removeAttribute('aria-disabled');
+            downloadBtn.removeAttribute('tabindex');
+          } else if (downloadBtn) {
+            downloadBtn.classList.add('disabled');
+            downloadBtn.setAttribute('aria-disabled', 'true');
+            downloadBtn.setAttribute('tabindex', '-1');
+            downloadBtn.href = '#';
+          }
+          if (deleteBtn && data.has_output) {
+            deleteBtn.disabled = false;
+          } else if (deleteBtn) {
+            deleteBtn.disabled = true;
+          }
+          if (data.state !== 'running') {
+            sessionStorage.removeItem(watchKey);
+          }
+          if (createBtn) createBtn.disabled = false;
+        } catch (err) {}
+      };
+      poll();
+    }
+
+    if (createBtn) {
+      createBtn.addEventListener('click', async () => {
+        if (!range.start) {
+          showStatus('{{ tr.get("gallery_timelapse_need_start", "Select a start image first.") if tr else "Select a start image first." }}', 'warning');
+          return;
+        }
+        if (!range.end) {
+          showStatus('{{ tr.get("gallery_timelapse_need_end", "Select an end image.") if tr else "Select an end image." }}', 'warning');
+          return;
+        }
+        const settings = saveSettings();
+        try {
+          const res = await fetch('/timelapse', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              start: range.start,
+              end: range.end,
+              fps: settings.fps || 25,
+              crf: settings.crf || 23,
+              width: settings.width || null,
+              height: settings.height || null,
+              preset: settings.preset || 'medium',
+            }),
+          });
+          if (!res.ok) {
+          if (res.status === 409) {
+            showStatus('{{ tr.get("gallery_timelapse_running", "Timelapse is already running.") if tr else "Timelapse is already running." }}', 'warning');
+            showGlobalStatus('{{ tr.get("gallery_timelapse_running", "Timelapse is already running.") if tr else "Timelapse is already running." }}', 'warning');
+            sessionStorage.setItem(watchKey, '1');
+            startStatusPolling();
+            return;
+          }
+            throw new Error(`timelapse_failed_${res.status}`);
+          }
+          showStatus('{{ tr.get("gallery_timelapse_started", "Timelapse started.") if tr else "Timelapse started." }}', 'success');
+          showGlobalStatus('{{ tr.get("gallery_timelapse_started", "Timelapse started.") if tr else "Timelapse started." }}', 'success');
+          sessionStorage.setItem(watchKey, '1');
+          startStatusPolling();
+        } catch (err) {
+          showStatus('{{ tr.get("gallery_timelapse_failed", "Timelapse failed to start.") if tr else "Timelapse failed to start." }}', 'danger');
+          showGlobalStatus('{{ tr.get("gallery_timelapse_failed", "Timelapse failed to start.") if tr else "Timelapse failed to start." }}', 'danger');
+        }
+      });
+    }
+
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', async () => {
+        if (!lastOutput) return;
+        try {
+          const res = await fetch(`/timelapse/delete/${encodeURIComponent(lastOutput)}`, { method: 'DELETE' });
+          if (!res.ok) throw new Error('delete_failed');
+          showStatus('{{ tr.get("gallery_timelapse_deleted", "Timelapse deleted.") if tr else "Timelapse deleted." }}', 'success');
+          deleteBtn.disabled = true;
+          if (downloadBtn) {
+            downloadBtn.classList.add('disabled');
+            downloadBtn.setAttribute('aria-disabled', 'true');
+            downloadBtn.setAttribute('tabindex', '-1');
+            downloadBtn.href = '#';
+          }
+        } catch (err) {
+          showStatus('{{ tr.get("gallery_timelapse_delete_failed", "Failed to delete timelapse.") if tr else "Failed to delete timelapse." }}', 'danger');
+        }
+      });
+    }
+  })();
+</script>
+{% endblock %}
+
+
+

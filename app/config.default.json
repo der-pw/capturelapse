@@ -1,0 +1,35 @@
+﻿{
+  "cam_url": "https://raw.githubusercontent.com/der-pw/capturelapse/refs/heads/main/app/static/img/last.jpg",
+  "instance_name": null,
+  "access_password": "",
+  "access_password_hash": null,
+  "username": "",
+  "password": "",
+  "auth_type": "none",
+  "save_path": "./pictures",
+  "interval_seconds": 300,
+  "active_start": "06:00",
+  "active_end": "22:00",
+  "active_days": [
+    "Mon",
+    "Tue",
+    "Wed",
+    "Thu",
+    "Fri",
+    "Sat",
+    "Sun"
+  ],
+  "schedule_start_date": null,
+  "schedule_end_date": null,
+  "use_astral": false,
+  "city_lat": 52.1676,
+  "city_lon": 10.5479,
+  "city_tz": "Europe/Berlin",
+  "log_file": null,
+  "log_enabled": true,
+  "language": "en",
+  "paused": false
+}
+
+
+

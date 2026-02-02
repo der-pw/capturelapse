@@ -1,0 +1,126 @@
+﻿{% extends "base.html" %}
+{% block title %}{{ tr['dashboard_title'] if tr else 'Dashboard' }} - {{ tr['app_name'] if tr else 'CaptureLapse' }}{% endblock %}
+{% block content %}
+<div id="dashboard-app"
+     data-last-label="{{ (tr['last_image_label'] if tr else 'Last image') | e }}"
+     data-camera-error-prefix="{{ (tr['camera_error_prefix'] if tr else 'Camera error') | e }}"
+     data-camera-error-snapshot="{{ (tr['camera_error_snapshot_failed'] if tr else 'Snapshot failed') | e }}"
+     data-status-paused="{{ (tr['paused'] if tr else 'Recording paused') | e }}"
+     data-status-running="{{ (tr['running'] if tr else 'Recording running') | e }}"
+     data-status-running-interval="{{ tr.get('running_interval', 'Recording running with {seconds} second interval') | e if tr else 'Recording running with {seconds} second interval' }}"
+     data-status-waiting="{{ (tr['waiting_window'] if tr else 'Waiting for active time window') | e }}"
+     data-status-config-reloaded="{{ (tr['config_reloaded'] if tr else 'Configuration reloaded') | e }}"
+     data-status-camera-error="{{ (tr['camera_error'] if tr else 'Camera access error') | e }}"
+     data-status-last-success="{{ (tr['last_image_success'] if tr else 'Last image captured successfully') | e }}"
+     data-next-snapshot-label="{{ tr.get('next_snapshot', 'Next snapshot') | e if tr else 'Next snapshot' }}"
+     data-status-reconnecting="{{ tr.get('status_reconnecting', 'Reconnecting to live updates ...') | e if tr else 'Reconnecting to live updates ...' }}"
+     data-status-failed="{{ tr.get('status_failed', 'Status konnte nicht geladen werden') | e if tr else 'Status konnte nicht geladen werden' }}"
+     data-action-error="{{ tr.get('action_error', 'Action failed') | e if tr else 'Action failed' }}"
+     data-locale="{{ lang or 'de' }}"
+     data-interval-seconds="{{ cfg.interval_seconds }}"
+     data-schedule-start="{{ cfg.schedule_start_date or '' }}"
+     data-schedule-end="{{ cfg.schedule_end_date or '' }}"
+     >
+
+  <h2><i class="fa-solid fa-camera me-2"></i>{{ tr["dashboard_title"] if tr else "Dashboard" }}</h2>
+  <hr class="mx-auto">
+
+    <!-- Status area -->
+    <div id="status-container" class="my-3">
+      <p id="status-text" class="lead m-0">{{ tr["status_starting"] if tr else "Starting monitoring ..." }}</p>
+    </div>
+
+    <!-- Image preview -->
+    <div class="text-center mt-3 mb-3">
+      <div class="image-frame">
+        <img id="latest-img" src="{{ url_for('static', path='img/last.jpg') }}?t={{ cache_buster }}"
+          alt="{{ tr['last_image_alt'] if tr else 'Last image' }}" class="img-fluid">
+    
+        <div class="d-flex justify-content-between gap-3 mt-1 text-muted small">
+          <p id="last-time" class="mb-0 ms-2 text-start" data-bs-toggle="tooltip"
+            data-bs-title="{{ tr['last_image_label'] if tr else 'Last image' }}">
+            <i class="fa-solid fa-rotate-left me-1"></i>
+            <span class="value">---</span>
+          </p>
+          <p id="next-snapshot" class="mb-0 me-2 text-end" data-bs-toggle="tooltip"
+            data-bs-title="{{ tr.get('next_snapshot', 'Next snapshot') if tr else 'Next snapshot' }}">
+            <i class="fa-regular fa-clock me-1"></i>
+            <span class="value">---</span>
+          </p>
+        </div>
+      </div>
+    </div>
+
+  <!-- Controls -->
+  <div class="d-flex justify-content-center mb-3 gap-3">
+    <button id="btn-pause" class="btn btn-warning">{{ tr["pause"] if tr else "Pause" }}</button>
+    <button id="btn-resume" class="btn btn-success">{{ tr["resume"] if tr else "Resume" }}</button>
+    <button id="btn-snapshot" class="btn btn-primary">{{ tr["snapshot"] if tr else "Snapshot" }}</button>
+  </div>
+
+  <!-- Info: 3 columns (Time/Images | Start/End | Sunrise/Sunset) -->
+  <div class="row justify-content-center mb-3">
+    <div class="col-md-12">
+      <div class="card shadow-sm p-3 bg-body-tertiary info-card">
+        <div class="row text-center align-items-center info-grid">
+          <div class="col-12 col-md-3 mb-3 mb-md-0 info-col">
+            <div class="info-item order-m-1">
+              <div class="fw-bold"><i class="fa-solid fa-clock me-1"></i>{{ tr["time"] if tr else "Time" }}</div>
+              <div id="time">--:--</div>
+            </div>
+          </div>
+          <div class="col-12 col-md-3 mb-3 mb-md-0 info-col">
+            <div class="info-item order-m-3">
+              <div class="fw-bold"><i class="fa-solid fa-play me-1"></i>{{ tr["start_time"] if tr else "Start Time" }}</div>
+              <div id="start-time">{{ cfg.active_start }}</div>
+            </div>
+          </div>
+          <div class="col-12 col-md-3 mb-3 mb-md-0 info-col">
+            <div class="info-item order-m-5">
+              <div class="fw-bold"><i class="fa-solid fa-sun me-1"></i>{{ tr["sunrise"] if tr else "Sunrise" }}</div>
+              <div id="sunrise">--:--</div>
+            </div>
+          </div>
+          <div class="col-12 col-md-3 mb-3 mb-md-0 info-col">
+            <div class="info-item order-m-7">
+              <div class="fw-bold"><i class="fa-solid fa-calendar-plus me-1"></i>{{ tr.get("schedule_start", "Schedule start") if tr else "Schedule start" }}</div>
+              <div id="schedule-start">--</div>
+            </div>
+          </div>
+          <div class="col-12 col-md-3 mb-3 mb-md-0 info-col">
+            <div class="info-item order-m-2">
+              <div class="fw-bold"><i class="fa-solid fa-images me-1"></i>{{ tr["saved_images"] if tr else "Saved Images" }}</div>
+              <div id="count">0</div>
+            </div>
+          </div>
+          <div class="col-12 col-md-3 mb-3 mb-md-0 info-col">
+            <div class="info-item order-m-4">
+              <div class="fw-bold"><i class="fa-solid fa-stop me-1"></i>{{ tr["end_time"] if tr else "End Time" }}</div>
+              <div id="end-time">{{ cfg.active_end }}</div>
+            </div>
+          </div>
+          <div class="col-12 col-md-3 mb-3 mb-md-0 info-col">
+            <div class="info-item order-m-6">
+              <div class="fw-bold"><i class="fa-solid fa-moon me-1"></i>{{ tr["sunset"] if tr else "Sunset" }}</div>
+              <div id="sunset">--:--</div>
+            </div>
+          </div>
+          <div class="col-12 col-md-3 info-col">
+            <div class="info-item order-m-8">
+              <div class="fw-bold"><i class="fa-solid fa-calendar-minus me-1"></i>{{ tr.get("schedule_end", "Schedule end") if tr else "Schedule end" }}</div>
+              <div id="schedule-end">--</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', path='js/dashboard.js') }}?v={{ app_version }}"></script>
+{% endblock %}
+
