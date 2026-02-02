@@ -67,14 +67,12 @@
       </button>
       <ul class="dropdown-menu dropdown-menu-end">
         <li>
-          <button id="gallery-timelapse-settings" class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#timelapseModal">
-            {{ tr.get('gallery_timelapse_settings', 'Timelapse settings') if tr else 'Timelapse settings' }}
-          </button>
-        </li>
-        <li>
-          <button id="gallery-create-timelapse" class="dropdown-item" type="button">
-            {{ tr.get('gallery_create_timelapse', 'Create timelapse') if tr else 'Create timelapse' }}
-          </button>
+          <span id="gallery-open-timelapse-wrap" class="d-inline-block" data-bs-toggle="tooltip" data-bs-placement="top"
+                data-bs-title="{{ tr.get('gallery_timelapse_select_hint', 'Select images first') if tr else 'Select images first' }}">
+            <button id="gallery-open-timelapse" class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#timelapseModal" disabled>
+              {{ tr.get('gallery_create_timelapse', 'Create timelapse') if tr else 'Create timelapse' }}
+            </button>
+          </span>
         </li>
         <li>
           <a id="gallery-timelapse-download" class="dropdown-item disabled" href="#" download aria-disabled="true" tabindex="-1">
@@ -232,7 +230,7 @@
         </div>
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ tr.get('close', 'Close') if tr else 'Close' }}</button>
         <button type="button" class="btn btn-outline-secondary" id="timelapse-reset">{{ tr.get('gallery_timelapse_reset', 'Reset') if tr else 'Reset' }}</button>
-        <button type="button" class="btn btn-success" id="timelapse-save-settings">{{ tr.get('save', 'Save') if tr else 'Save' }}</button>
+        <button type="button" class="btn btn-success" id="timelapse-export">{{ tr.get('gallery_timelapse_export', 'Export') if tr else 'Export' }}</button>
       </div>
     </div>
   </div>
@@ -340,7 +338,8 @@
     const selectAllBtn = document.getElementById('gallery-select-all');
     const pickButtons = Array.from(document.querySelectorAll('.gallery-mark-range'));
     const storageKey = 'capturelapse_gallery_range';
-    const createBtn = document.getElementById('gallery-create-timelapse');
+    const openBtn = document.getElementById('gallery-open-timelapse');
+    const openWrap = document.getElementById('gallery-open-timelapse-wrap');
     const pickFirstLabel = '{{ tr.get("gallery_pick_first", "Pick first") if tr else "Pick first" }}';
     const pickLastLabel = '{{ tr.get("gallery_pick_last", "Pick last") if tr else "Pick last" }}';
     const deleteSelectedLabel = '{{ tr.get("gallery_delete_selected", "Delete selected") if tr else "Delete selected" }}';
@@ -348,6 +347,7 @@
     const deleteSelectedSuccess = '{{ tr.get("gallery_delete_selected_success", "Selected images deleted.") if tr else "Selected images deleted." }}';
     const deleteSelectedFailed = '{{ tr.get("gallery_delete_selected_failed", "Failed to delete selected images.") if tr else "Failed to delete selected images." }}';
     const deleteSelectedEmpty = '{{ tr.get("gallery_delete_selected_empty", "No images selected.") if tr else "No images selected." }}';
+    const timelapseSelectHint = '{{ tr.get("gallery_timelapse_select_hint", "Select images first") if tr else "Select images first" }}';
 
     function loadRange() {
       try {
@@ -425,6 +425,23 @@
         } else {
           deleteSelectedBtn.disabled = true;
           deleteSelectedBtn.classList.remove('is-visible');
+        }
+      }
+      if (openBtn) {
+        const enabled = Boolean(range.start || range.end);
+        openBtn.disabled = !enabled;
+        if (openWrap && window.bootstrap && window.bootstrap.Tooltip) {
+          const tooltip = window.bootstrap.Tooltip.getOrCreateInstance(openWrap);
+          if (enabled) {
+            tooltip.hide();
+            tooltip.disable();
+          } else {
+            if (openWrap.getAttribute('data-bs-title') !== timelapseSelectHint) {
+              openWrap.setAttribute('data-bs-title', timelapseSelectHint);
+              tooltip.setContent({ '.tooltip-inner': timelapseSelectHint });
+            }
+            tooltip.enable();
+          }
         }
       }
       const pickLabel = range.start && !range.end ? pickLastLabel : pickFirstLabel;
@@ -615,7 +632,6 @@
       });
     }
 
-    const settingsBtn = document.getElementById('gallery-timelapse-settings');
     const downloadBtn = document.getElementById('gallery-timelapse-download');
     const deleteBtn = document.getElementById('gallery-timelapse-delete');
     const watchKey = 'capturelapse_timelapse_watch';
@@ -626,7 +642,7 @@
     const widthInput = document.getElementById('timelapse-width');
     const heightInput = document.getElementById('timelapse-height');
     const presetSelect = document.getElementById('timelapse-preset');
-    const settingsSave = document.getElementById('timelapse-save-settings');
+    const exportBtn = document.getElementById('timelapse-export');
     const settingsReset = document.getElementById('timelapse-reset');
     const lengthLabel = '{{ tr.get("gallery_timelapse_length", "Length") if tr else "Length" }}';
     const lengthUnknown = '{{ tr.get("gallery_timelapse_length_unknown", "Select images to see length") if tr else "Select images to see length" }}';
@@ -721,23 +737,8 @@
       saveSettings();
     }
 
-    if (settingsSave) {
-      settingsSave.addEventListener('click', () => {
-        saveSettings();
-        if (window.bootstrap) {
-          const modal = window.bootstrap.Modal.getInstance(document.getElementById('timelapseModal'));
-          if (modal) modal.hide();
-        }
-      });
-    }
-
     if (settingsReset) {
       settingsReset.addEventListener('click', resetSettings);
-    }
-    if (settingsBtn) {
-      settingsBtn.addEventListener('click', () => {
-        updateTimelapseLength();
-      });
     }
     if (crfInput) {
       crfInput.addEventListener('input', applyCrfLabel);
@@ -876,8 +877,8 @@
       poll();
     }
 
-    if (createBtn) {
-      createBtn.addEventListener('click', async () => {
+    if (exportBtn) {
+      exportBtn.addEventListener('click', async () => {
         if (!range.start) {
           showStatus('{{ tr.get("gallery_timelapse_need_start", "Select a start image first.") if tr else "Select a start image first." }}', 'warning');
           return;
@@ -911,6 +912,10 @@
           }
             throw new Error(`timelapse_failed_${res.status}`);
           }
+          if (window.bootstrap) {
+            const modal = window.bootstrap.Modal.getInstance(document.getElementById('timelapseModal'));
+            if (modal) modal.hide();
+          }
           showStatus('{{ tr.get("gallery_timelapse_started", "Timelapse started.") if tr else "Timelapse started." }}', 'success');
           showGlobalStatus('{{ tr.get("gallery_timelapse_started", "Timelapse started.") if tr else "Timelapse started." }}', 'success');
           sessionStorage.setItem(watchKey, '1');
@@ -922,6 +927,16 @@
       });
     }
 
+    if (openBtn) {
+      openBtn.addEventListener('click', () => {
+        updateTimelapseLength();
+      });
+    }
+    if (openWrap && window.bootstrap && window.bootstrap.Tooltip) {
+      const tooltip = window.bootstrap.Tooltip.getOrCreateInstance(openWrap);
+      tooltip.disable();
+    }
+
     if (deleteBtn) {
       deleteBtn.addEventListener('click', async () => {
         if (!lastOutput) return;
@@ -930,6 +945,7 @@
           if (!res.ok) throw new Error('delete_failed');
           showStatus('{{ tr.get("gallery_timelapse_deleted", "Timelapse deleted.") if tr else "Timelapse deleted." }}', 'success');
           deleteBtn.disabled = true;
+          lastOutput = null;
           if (downloadBtn) {
             downloadBtn.classList.add('disabled');
             downloadBtn.setAttribute('aria-disabled', 'true');

@@ -16,7 +16,7 @@ import bcrypt
 import subprocess
 import threading
 
-from app.config_manager import load_config, save_config, resolve_save_dir
+from app.config_manager import load_config, save_config, resolve_save_dir, PICTURES_DIR
 from app.models import ConfigModel
 from app.scheduler import start_scheduler, stop_scheduler, cfg_lock, cfg, set_paused, is_active_time, get_next_snapshot_iso
 from app import i18n
@@ -47,7 +47,7 @@ app.mount(
 )
 
 # === Templates ===
-APP_VERSION = "0.9.0-beta"
+APP_VERSION = "0.9.1-beta"
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 templates.env.globals["app_version"] = APP_VERSION
 IMAGE_STATS_TTL_SECONDS = 60
@@ -989,27 +989,53 @@ async def timelapse_status():
 async def delete_timelapse(filename: str):
     async with cfg_lock:
         local_cfg = cfg
+    if "/" in filename or "\\" in filename:
+        raise HTTPException(status_code=404)
     if not (filename.startswith("timelapse_") and filename.lower().endswith(".mp4")):
         raise HTTPException(status_code=404)
     save_dir = resolve_save_dir(getattr(local_cfg, "save_path", None))
     deleted_any = False
-    try:
-        for f in save_dir.glob("timelapse_*.mp4"):
-            if not f.is_file():
-                continue
-            try:
-                f.resolve().relative_to(save_dir.resolve())
-            except Exception:
-                continue
-            try:
-                f.unlink()
-                deleted_any = True
-            except Exception:
-                raise HTTPException(status_code=500, detail="delete_failed")
-    except HTTPException:
-        raise
-    except Exception:
-        raise HTTPException(status_code=500, detail="delete_failed")
+
+    def _try_delete_in_dir(base_dir: Path) -> bool:
+        try:
+            candidate = (base_dir / filename).resolve()
+            if candidate.exists() and candidate.is_file():
+                try:
+                    candidate.relative_to(base_dir.resolve())
+                except Exception:
+                    return False
+                candidate.unlink()
+                return True
+        except Exception:
+            raise HTTPException(status_code=500, detail="delete_failed")
+        return False
+
+    if _try_delete_in_dir(save_dir):
+        deleted_any = True
+    elif PICTURES_DIR != save_dir and _try_delete_in_dir(PICTURES_DIR):
+        deleted_any = True
+
+    if not deleted_any:
+        try:
+            for base_dir in {save_dir, PICTURES_DIR}:
+                if not base_dir.exists():
+                    continue
+                for f in base_dir.glob("timelapse_*.mp4"):
+                    if not f.is_file():
+                        continue
+                    try:
+                        f.resolve().relative_to(base_dir.resolve())
+                    except Exception:
+                        continue
+                    try:
+                        f.unlink()
+                        deleted_any = True
+                    except Exception:
+                        raise HTTPException(status_code=500, detail="delete_failed")
+        except HTTPException:
+            raise
+        except Exception:
+            raise HTTPException(status_code=500, detail="delete_failed")
     if not deleted_any:
         raise HTTPException(status_code=404)
     with _timelapse_lock:

@@ -142,6 +142,8 @@
   "gallery_timelapse_presets": "Presets",
   "gallery_timelapse_preset_original": "Originalgröße",
   "gallery_timelapse_reset": "Zurücksetzen",
+  "gallery_timelapse_export": "Export",
+  "gallery_timelapse_select_hint": "Erst eine Auswahl treffen",
   "gallery_timelapse_need_start": "Bitte zuerst ein Startbild auswählen.",
   "gallery_timelapse_need_end": "Bitte ein Endbild auswählen.",
   "gallery_timelapse_started": "Zeitraffer wurde gestartet.",
