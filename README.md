@@ -107,10 +107,6 @@ Environment overrides:
 - `CAPTURELAPSE_DATA_DIR`: optional env var to override where `config.json` is stored
 - `CAPTURELAPSE_PICTURES_DIR`: optional env var to override the pictures root
 
-## What's New (v2.3.3)
-- Treat `00:00` to `00:00` as a full-day capture window.
-- Next snapshot calculation respects full-day windows.
-
 ## Project Layout
 - `app/` - Application code (FastAPI + templates + static assets)
 - `app/static/js/` - Frontend scripts (shared helpers, dashboard, settings)
