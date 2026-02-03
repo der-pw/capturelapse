@@ -12,7 +12,6 @@
 - [Run (API + Web UI)](#run-api--web-ui)
   - [Endpoints](#endpoints)
 - [Configuration](#configuration)
-- [What's New (v2.3.3)](#whats-new-v233)
 - [Project Layout](#project-layout)
 - [Docker Compose](#docker-compose)
   - [Linux Quick Start (Docker Compose)](#linux-quick-start-docker-compose)
