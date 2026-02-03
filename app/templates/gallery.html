@@ -67,21 +67,15 @@
       </button>
       <ul class="dropdown-menu dropdown-menu-end">
         <li>
-          <span id="gallery-open-timelapse-wrap" class="d-inline-block" data-bs-toggle="tooltip" data-bs-placement="top"
-                data-bs-title="{{ tr.get('gallery_timelapse_select_hint', 'Select images first') if tr else 'Select images first' }}">
+          <span id="gallery-open-timelapse-wrap" class="d-inline-block">
             <button id="gallery-open-timelapse" class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#timelapseModal" disabled>
               {{ tr.get('gallery_create_timelapse', 'Create timelapse') if tr else 'Create timelapse' }}
             </button>
           </span>
         </li>
         <li>
-          <a id="gallery-timelapse-download" class="dropdown-item disabled" href="#" download aria-disabled="true" tabindex="-1">
+          <button id="gallery-timelapse-download" class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#timelapseListModal">
             {{ tr.get('gallery_timelapse_download', 'Download timelapse') if tr else 'Download timelapse' }}
-          </a>
-        </li>
-        <li>
-          <button id="gallery-timelapse-delete" class="dropdown-item text-danger" type="button" disabled>
-            {{ tr.get('gallery_timelapse_delete', 'Delete timelapse') if tr else 'Delete timelapse' }}
           </button>
         </li>
       </ul>
@@ -235,6 +229,39 @@
     </div>
   </div>
 </div>
+
+<div class="modal fade" id="timelapseListModal" tabindex="-1" aria-labelledby="timelapseListModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="timelapseListModalLabel">{{ tr.get('gallery_timelapse_list_title', 'Timelapse videos') if tr else 'Timelapse videos' }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ tr.get('close', 'Close') if tr else 'Close' }}"></button>
+      </div>
+      <div class="modal-body">
+        <div id="timelapse-list-empty" class="text-muted">{{ tr.get('gallery_timelapse_list_empty', 'No timelapse videos found.') if tr else 'No timelapse videos found.' }}</div>
+        <div class="table-responsive mt-2">
+          <table class="table table-sm align-middle" id="timelapse-list-table" style="display:none;">
+            <thead>
+      <tr>
+        <th scope="col">{{ tr.get('gallery_timelapse_list_name', 'Name') if tr else 'Name' }}</th>
+        <th scope="col">{{ tr.get('gallery_timelapse_list_created', 'Created') if tr else 'Created' }}</th>
+        <th scope="col">{{ tr.get('gallery_timelapse_list_size', 'Size') if tr else 'Size' }}</th>
+        <th scope="col"></th>
+      </tr>
+            </thead>
+            <tbody id="timelapse-list-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" id="timelapse-list-refresh">
+          {{ tr.get('gallery_timelapse_list_refresh', 'Refresh') if tr else 'Refresh' }}
+        </button>
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ tr.get('close', 'Close') if tr else 'Close' }}</button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -347,7 +374,6 @@
     const deleteSelectedSuccess = '{{ tr.get("gallery_delete_selected_success", "Selected images deleted.") if tr else "Selected images deleted." }}';
     const deleteSelectedFailed = '{{ tr.get("gallery_delete_selected_failed", "Failed to delete selected images.") if tr else "Failed to delete selected images." }}';
     const deleteSelectedEmpty = '{{ tr.get("gallery_delete_selected_empty", "No images selected.") if tr else "No images selected." }}';
-    const timelapseSelectHint = '{{ tr.get("gallery_timelapse_select_hint", "Select images first") if tr else "Select images first" }}';
 
     function loadRange() {
       try {
@@ -430,19 +456,6 @@
       if (openBtn) {
         const enabled = Boolean(range.start || range.end);
         openBtn.disabled = !enabled;
-        if (openWrap && window.bootstrap && window.bootstrap.Tooltip) {
-          const tooltip = window.bootstrap.Tooltip.getOrCreateInstance(openWrap);
-          if (enabled) {
-            tooltip.hide();
-            tooltip.disable();
-          } else {
-            if (openWrap.getAttribute('data-bs-title') !== timelapseSelectHint) {
-              openWrap.setAttribute('data-bs-title', timelapseSelectHint);
-              tooltip.setContent({ '.tooltip-inner': timelapseSelectHint });
-            }
-            tooltip.enable();
-          }
-        }
       }
       const pickLabel = range.start && !range.end ? pickLastLabel : pickFirstLabel;
       pickButtons.forEach((btn) => {
@@ -632,8 +645,6 @@
       });
     }
 
-    const downloadBtn = document.getElementById('gallery-timelapse-download');
-    const deleteBtn = document.getElementById('gallery-timelapse-delete');
     const watchKey = 'capturelapse_timelapse_watch';
     const fpsInput = document.getElementById('timelapse-fps');
     const lengthEl = document.getElementById('timelapse-length');
@@ -795,13 +806,6 @@
               showStatus(`${statusLabel.running}${suffix}`, 'info', { sticky: true });
             }
             sessionStorage.setItem(watchKey, '1');
-            if (downloadBtn) {
-              downloadBtn.classList.add('disabled');
-              downloadBtn.setAttribute('aria-disabled', 'true');
-              downloadBtn.setAttribute('tabindex', '-1');
-              downloadBtn.href = '#';
-            }
-            if (deleteBtn) deleteBtn.disabled = true;
             if (createBtn) createBtn.disabled = true;
             setTimeout(poll, 3000);
             return;
@@ -815,22 +819,6 @@
             }
             sessionStorage.removeItem(watchKey);
             lastOutput = data.output || null;
-            if (downloadBtn && data.output) {
-              downloadBtn.href = `/timelapse/download/${encodeURIComponent(data.output)}`;
-              downloadBtn.classList.remove('disabled');
-              downloadBtn.removeAttribute('aria-disabled');
-              downloadBtn.removeAttribute('tabindex');
-            } else if (downloadBtn) {
-              downloadBtn.classList.add('disabled');
-              downloadBtn.setAttribute('aria-disabled', 'true');
-              downloadBtn.setAttribute('tabindex', '-1');
-              downloadBtn.href = '#';
-            }
-            if (deleteBtn && data.has_output) {
-              deleteBtn.disabled = false;
-            } else if (deleteBtn) {
-              deleteBtn.disabled = true;
-            }
             if (createBtn) createBtn.disabled = false;
             return;
           }
@@ -841,33 +829,10 @@
               }
             }
             sessionStorage.removeItem(watchKey);
-            if (downloadBtn) {
-              downloadBtn.classList.add('disabled');
-              downloadBtn.setAttribute('aria-disabled', 'true');
-              downloadBtn.setAttribute('tabindex', '-1');
-              downloadBtn.href = '#';
-            }
-            if (deleteBtn) deleteBtn.disabled = true;
             if (createBtn) createBtn.disabled = false;
             return;
           }
           lastOutput = data.output || null;
-          if (downloadBtn && data.has_output && data.output) {
-            downloadBtn.href = `/timelapse/download/${encodeURIComponent(data.output)}`;
-            downloadBtn.classList.remove('disabled');
-            downloadBtn.removeAttribute('aria-disabled');
-            downloadBtn.removeAttribute('tabindex');
-          } else if (downloadBtn) {
-            downloadBtn.classList.add('disabled');
-            downloadBtn.setAttribute('aria-disabled', 'true');
-            downloadBtn.setAttribute('tabindex', '-1');
-            downloadBtn.href = '#';
-          }
-          if (deleteBtn && data.has_output) {
-            deleteBtn.disabled = false;
-          } else if (deleteBtn) {
-            deleteBtn.disabled = true;
-          }
           if (data.state !== 'running') {
             sessionStorage.removeItem(watchKey);
           }
@@ -932,30 +897,114 @@
         updateTimelapseLength();
       });
     }
-    if (openWrap && window.bootstrap && window.bootstrap.Tooltip) {
-      const tooltip = window.bootstrap.Tooltip.getOrCreateInstance(openWrap);
-      tooltip.disable();
+
+    const listModalEl = document.getElementById('timelapseListModal');
+    const listBody = document.getElementById('timelapse-list-body');
+    const listTable = document.getElementById('timelapse-list-table');
+    const listEmpty = document.getElementById('timelapse-list-empty');
+    const listRefresh = document.getElementById('timelapse-list-refresh');
+    const listLabels = {
+      download: '{{ tr.get("gallery_timelapse_list_download", "Download") if tr else "Download" }}',
+      delete: '{{ tr.get("gallery_timelapse_list_delete", "Delete") if tr else "Delete" }}',
+      deleteConfirm: '{{ tr.get("gallery_timelapse_list_delete_confirm", "Delete this timelapse?") if tr else "Delete this timelapse?" }}',
+      deleteFailed: '{{ tr.get("gallery_timelapse_list_delete_failed", "Failed to delete timelapse.") if tr else "Failed to delete timelapse." }}',
+      unknown: '{{ tr.get("gallery_timelapse_list_unknown", "Unknown") if tr else "Unknown" }}',
+    };
+
+    function formatBytes(bytes) {
+      const value = Number(bytes);
+      if (!Number.isFinite(value) || value < 0) return listLabels.unknown;
+      if (value < 1024) return `${value} B`;
+      const kb = value / 1024;
+      if (kb < 1024) return `${kb.toFixed(1)} KB`;
+      const mb = kb / 1024;
+      if (mb < 1024) return `${mb.toFixed(1)} MB`;
+      const gb = mb / 1024;
+      return `${gb.toFixed(2)} GB`;
     }
 
-    if (deleteBtn) {
-      deleteBtn.addEventListener('click', async () => {
-        if (!lastOutput) return;
-        try {
-          const res = await fetch(`/timelapse/delete/${encodeURIComponent(lastOutput)}`, { method: 'DELETE' });
-          if (!res.ok) throw new Error('delete_failed');
-          showStatus('{{ tr.get("gallery_timelapse_deleted", "Timelapse deleted.") if tr else "Timelapse deleted." }}', 'success');
-          deleteBtn.disabled = true;
-          lastOutput = null;
-          if (downloadBtn) {
-            downloadBtn.classList.add('disabled');
-            downloadBtn.setAttribute('aria-disabled', 'true');
-            downloadBtn.setAttribute('tabindex', '-1');
-            downloadBtn.href = '#';
-          }
-        } catch (err) {
-          showStatus('{{ tr.get("gallery_timelapse_delete_failed", "Failed to delete timelapse.") if tr else "Failed to delete timelapse." }}', 'danger');
-        }
-      });
+    function formatTimestamp(value) {
+      if (!value) return listLabels.unknown;
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      try {
+        return new Intl.DateTimeFormat(navigator.language || 'de', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        }).format(date);
+      } catch (_) {
+        return value;
+      }
+    }
+
+    async function loadTimelapseList() {
+      if (!listBody || !listTable || !listEmpty) return;
+      listBody.innerHTML = '';
+      listTable.style.display = 'none';
+      listEmpty.style.display = '';
+      try {
+        const res = await fetch('/timelapse/list');
+        if (!res.ok) throw new Error(`list_failed_${res.status}`);
+        const data = await res.json();
+        const items = Array.isArray(data.items) ? data.items : [];
+        if (!items.length) return;
+        items.forEach((item) => {
+          const tr = document.createElement('tr');
+          const nameTd = document.createElement('td');
+          nameTd.textContent = item.name || listLabels.unknown;
+          const createdTd = document.createElement('td');
+          createdTd.textContent = formatTimestamp(item.timestamp);
+          const sizeTd = document.createElement('td');
+          sizeTd.textContent = formatBytes(item.size);
+          const actionTd = document.createElement('td');
+          actionTd.className = 'text-end';
+          const link = document.createElement('a');
+          link.className = 'btn btn-sm btn-outline-secondary me-2';
+          link.href = `/timelapse/download/${encodeURIComponent(item.name || '')}`;
+          link.textContent = listLabels.download;
+          const delBtn = document.createElement('button');
+          delBtn.type = 'button';
+          delBtn.className = 'btn btn-sm btn-outline-danger';
+          delBtn.textContent = listLabels.delete;
+          delBtn.addEventListener('click', async () => {
+            if (!window.confirm(listLabels.deleteConfirm)) return;
+            try {
+              const res = await fetch(`/timelapse/delete/${encodeURIComponent(item.name || '')}`, { method: 'DELETE' });
+              if (!res.ok) throw new Error('delete_failed');
+              tr.remove();
+              if (listBody && !listBody.children.length) {
+                listEmpty.style.display = '';
+                listTable.style.display = 'none';
+              }
+            } catch (err) {
+              showStatus(listLabels.deleteFailed, 'danger');
+            }
+          });
+          actionTd.appendChild(link);
+          actionTd.appendChild(delBtn);
+          tr.appendChild(nameTd);
+          tr.appendChild(createdTd);
+          tr.appendChild(sizeTd);
+          tr.appendChild(actionTd);
+          listBody.appendChild(tr);
+        });
+        listEmpty.style.display = 'none';
+        listTable.style.display = '';
+      } catch (err) {
+        listEmpty.style.display = '';
+        listTable.style.display = 'none';
+      }
+    }
+
+    if (listModalEl) {
+      listModalEl.addEventListener('shown.bs.modal', loadTimelapseList);
+    }
+    if (listRefresh) {
+      listRefresh.addEventListener('click', loadTimelapseList);
     }
   })();
 </script>

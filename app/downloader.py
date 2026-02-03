@@ -83,17 +83,22 @@ def check_camera_health(cfg):
 
     try:
         # Prefer HEAD to avoid downloading the full snapshot; fall back to GET if needed.
-        resp = requests.head(cfg.cam_url, auth=auth, timeout=5, allow_redirects=True)
-        status = resp.status_code
+        try:
+            resp = requests.head(cfg.cam_url, auth=auth, timeout=5, allow_redirects=True)
+            status = resp.status_code
+        except Exception:
+            status = 599
+            resp = None
+
         if status >= 400:
             # Some cameras reject HEAD (or auth on HEAD) but allow GET.
+            # Avoid Range headers because some cameras drop the connection on ranged requests.
             resp = requests.get(
                 cfg.cam_url,
                 auth=auth,
                 timeout=5,
                 stream=True,
                 allow_redirects=True,
-                headers={"Range": "bytes=0-1023"},
             )
             status = resp.status_code
             # Read a single chunk to confirm reachability

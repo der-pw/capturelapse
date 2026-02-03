@@ -199,7 +199,9 @@
 
   function formatCameraHealth(healthInfo) {
     if (!healthInfo || healthInfo.status !== 'error') return '';
-    return `${messages.cameraErrorPrefix}: ${messages.cameraErrorSnapshot}`;
+    const detail = healthInfo.message || healthInfo.code || '';
+    const suffix = detail ? `: ${detail}` : '';
+    return `${messages.cameraErrorPrefix}${suffix}`;
   }
 
   function refreshImage() {

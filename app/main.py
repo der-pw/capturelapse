@@ -15,6 +15,7 @@ import hashlib
 import bcrypt
 import subprocess
 import threading
+import re
 
 from app.config_manager import load_config, save_config, resolve_save_dir, PICTURES_DIR
 from app.models import ConfigModel
@@ -47,7 +48,7 @@ app.mount(
 )
 
 # === Templates ===
-APP_VERSION = "0.9.1-beta"
+APP_VERSION = "0.9.2-beta"
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 templates.env.globals["app_version"] = APP_VERSION
 IMAGE_STATS_TTL_SECONDS = 60
@@ -91,6 +92,58 @@ def _safe_instance_slug(name: Optional[str]) -> str:
     cleaned = "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in raw)
     cleaned = cleaned.strip("_-") or "capturelapse"
     return cleaned[:64]
+
+
+_TIMELAPSE_NAME_RE = re.compile(r"^.+_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}(?:-\d+)?\.mp4$", re.IGNORECASE)
+
+
+def _is_timelapse_filename(name: str) -> bool:
+    lower = (name or "").lower()
+    if not lower.endswith(".mp4"):
+        return False
+    if lower.startswith("timelapse_"):
+        return True
+    return bool(_TIMELAPSE_NAME_RE.match(name))
+
+
+def _list_timelapse_files(base_dirs: list[Path]) -> list[Path]:
+    files: list[Path] = []
+    for base_dir in base_dirs:
+        if not base_dir.exists():
+            continue
+        try:
+            base_resolved = base_dir.resolve()
+        except Exception:
+            base_resolved = base_dir
+        for f in base_dir.iterdir():
+            if not f.is_file() or not _is_timelapse_filename(f.name):
+                continue
+            try:
+                f.resolve().relative_to(base_resolved)
+            except Exception:
+                continue
+            files.append(f)
+    return files
+
+
+def _find_timelapse_file(base_dirs: list[Path], filename: str) -> Optional[Path]:
+    if "/" in filename or "\\" in filename:
+        return None
+    if not _is_timelapse_filename(filename):
+        return None
+    for base_dir in base_dirs:
+        try:
+            candidate = (base_dir / filename).resolve()
+        except Exception:
+            continue
+        if not candidate.exists() or not candidate.is_file():
+            continue
+        try:
+            candidate.relative_to(base_dir.resolve())
+        except Exception:
+            continue
+        return candidate
+    return None
 
 
 def _normalize_password(pwd: str) -> bytes:
@@ -857,9 +910,19 @@ async def create_timelapse(payload: dict = Body(...)):
     list_lines = [f"file '{_escape(name)}'" for _, name in items]
     list_path.write_text("\n".join(list_lines) + "\n", encoding="utf-8")
 
-    timestamp = _now_in_cfg_tz(local_cfg).strftime("%Y%m%d_%H%M")
+    timestamp = _now_in_cfg_tz(local_cfg).strftime("%Y-%m-%d_%H-%M")
     instance_slug = _safe_instance_slug(getattr(local_cfg, "instance_name", None))
-    output_path = save_dir / f"timelapse_{instance_slug}.mp4"
+    base_name = f"{instance_slug}_{timestamp}"
+    output_name = f"{base_name}.mp4"
+    output_path = save_dir / output_name
+    if output_path.exists():
+        counter = 2
+        while True:
+            candidate = save_dir / f"{base_name}-{counter}.mp4"
+            if not candidate.exists():
+                output_path = candidate
+                break
+            counter += 1
 
     cmd = [
         "nice", "-n", "10",
@@ -966,13 +1029,7 @@ async def timelapse_status():
     save_dir = resolve_save_dir(getattr(local_cfg, "save_path", None))
     has_output = False
     output_name = None
-    candidates = []
-    try:
-        for f in save_dir.glob("timelapse_*.mp4"):
-            if f.is_file():
-                candidates.append(f)
-    except Exception:
-        candidates = []
+    candidates = _list_timelapse_files([save_dir, PICTURES_DIR] if PICTURES_DIR != save_dir else [save_dir])
     if candidates:
         has_output = True
         latest = max(candidates, key=lambda p: p.stat().st_mtime)
@@ -989,12 +1046,9 @@ async def timelapse_status():
 async def delete_timelapse(filename: str):
     async with cfg_lock:
         local_cfg = cfg
-    if "/" in filename or "\\" in filename:
-        raise HTTPException(status_code=404)
-    if not (filename.startswith("timelapse_") and filename.lower().endswith(".mp4")):
-        raise HTTPException(status_code=404)
     save_dir = resolve_save_dir(getattr(local_cfg, "save_path", None))
     deleted_any = False
+    base_dirs = [save_dir, PICTURES_DIR] if PICTURES_DIR != save_dir else [save_dir]
 
     def _try_delete_in_dir(base_dir: Path) -> bool:
         try:
@@ -1010,6 +1064,9 @@ async def delete_timelapse(filename: str):
             raise HTTPException(status_code=500, detail="delete_failed")
         return False
 
+    if not _is_timelapse_filename(filename):
+        raise HTTPException(status_code=404)
+
     if _try_delete_in_dir(save_dir):
         deleted_any = True
     elif PICTURES_DIR != save_dir and _try_delete_in_dir(PICTURES_DIR):
@@ -1017,11 +1074,13 @@ async def delete_timelapse(filename: str):
 
     if not deleted_any:
         try:
-            for base_dir in {save_dir, PICTURES_DIR}:
+            for base_dir in base_dirs:
                 if not base_dir.exists():
                     continue
-                for f in base_dir.glob("timelapse_*.mp4"):
+                for f in base_dir.iterdir():
                     if not f.is_file():
+                        continue
+                    if not _is_timelapse_filename(f.name):
                         continue
                     try:
                         f.resolve().relative_to(base_dir.resolve())
@@ -1052,20 +1111,36 @@ async def delete_timelapse(filename: str):
 async def download_timelapse(filename: str):
     async with cfg_lock:
         local_cfg = cfg
-    if "/" in filename or "\\" in filename:
-        raise HTTPException(status_code=404)
-    if not (filename.startswith("timelapse_") and filename.lower().endswith(".mp4")):
-        raise HTTPException(status_code=404)
     save_dir = resolve_save_dir(getattr(local_cfg, "save_path", None))
-    file_path = (save_dir / filename).resolve()
-    if not file_path.exists() or not file_path.is_file():
-        raise HTTPException(status_code=404)
-    try:
-        file_path.relative_to(save_dir.resolve())
-    except Exception:
+    base_dirs = [save_dir, PICTURES_DIR] if PICTURES_DIR != save_dir else [save_dir]
+    file_path = _find_timelapse_file(base_dirs, filename)
+    if not file_path:
         raise HTTPException(status_code=404)
     media_type = "video/mp4" if filename.lower().endswith(".mp4") else "video/x-msvideo"
     return FileResponse(file_path, media_type=media_type, filename=filename)
+
+
+@app.get("/timelapse/list")
+async def timelapse_list():
+    async with cfg_lock:
+        local_cfg = cfg
+    tz = _get_cfg_tz(local_cfg)
+    save_dir = resolve_save_dir(getattr(local_cfg, "save_path", None))
+    base_dirs = [save_dir, PICTURES_DIR] if PICTURES_DIR != save_dir else [save_dir]
+    candidates = _list_timelapse_files(base_dirs)
+    items = []
+    for f in sorted(candidates, key=lambda p: p.stat().st_mtime, reverse=True):
+        try:
+            stat = f.stat()
+        except Exception:
+            continue
+        dt = datetime.fromtimestamp(stat.st_mtime, tz=tz) if tz else datetime.fromtimestamp(stat.st_mtime)
+        items.append({
+            "name": f.name,
+            "size": stat.st_size,
+            "timestamp": dt.isoformat(timespec="seconds"),
+        })
+    return {"items": items}
 
 
 # === Action routes ===
