@@ -1,8 +1,10 @@
 ﻿{% extends "base.html" %}
-{% block title %}{{ tr.get('gallery_title', 'Gallery') if tr else 'Gallery' }} - {{ tr['app_name'] if tr else 'CaptureLapse' }}{% endblock %}
+{% block title %}{{ tr.get('gallery_title', 'Gallery') if tr else 'Gallery' }} - {{ tr['app_name'] if tr else
+'CaptureLapse' }}{% endblock %}
 {% block content %}
 <div class="d-flex flex-wrap gap-3 align-items-center">
-  <h2 class="mb-0"><i class="fa-solid fa-images me-2"></i>{{ tr.get('gallery_title', 'Gallery') if tr else 'Gallery' }}</h2>
+  <h2 class="mb-0"><i class="fa-solid fa-images me-2"></i>{{ tr.get('gallery_title', 'Gallery') if tr else 'Gallery' }}
+  </h2>
 </div>
 <hr class="mx-auto">
 
@@ -20,65 +22,62 @@
       <label class="form-label">{{ tr.get('gallery_filter_limit', 'Limit') if tr else 'Limit' }}</label>
       <select class="form-select" name="limit">
         {% for v in [50, 100, 200, 500, 1000, 2000] %}
-        <option value="{{ v }}" {% if filters.limit == v %}selected{% endif %}>{{ v }}</option>
+        <option value="{{ v }}" {% if filters.limit==v %}selected{% endif %}>{{ v }}</option>
         {% endfor %}
       </select>
     </div>
     <div class="col-6 col-md-2">
       <label class="form-label">{{ tr.get('gallery_filter_sort', 'Sort') if tr else 'Sort' }}</label>
       <select class="form-select" name="sort">
-        <option value="desc" {% if filters.sort == 'desc' %}selected{% endif %}>{{ tr.get('gallery_sort_desc', 'Newest first') if tr else 'Newest first' }}</option>
-        <option value="asc" {% if filters.sort == 'asc' %}selected{% endif %}>{{ tr.get('gallery_sort_asc', 'Oldest first') if tr else 'Oldest first' }}</option>
+        <option value="desc" {% if filters.sort=='desc' %}selected{% endif %}>{{ tr.get('gallery_sort_desc', 'Newest
+          first') if tr else 'Newest first' }}</option>
+        <option value="asc" {% if filters.sort=='asc' %}selected{% endif %}>{{ tr.get('gallery_sort_asc', 'Oldest
+          first') if tr else 'Oldest first' }}</option>
       </select>
     </div>
     <input type="hidden" name="page" value="1">
     <div class="col-12 col-md-1 d-grid">
-      <button class="btn btn-outline-secondary" type="submit">{{ tr.get('gallery_filter_apply', 'Apply') if tr else 'Apply' }}</button>
+      <button class="btn btn-outline-secondary" type="submit">{{ tr.get('gallery_filter_apply', 'Apply') if tr else
+        'Apply' }}</button>
     </div>
   </form>
-  <div class="gallery-clear-wrap d-flex flex-wrap gap-3 align-items-center pb-2">
-    <div class="text-muted small" id="gallery-total-count" data-count="{{ filters.total_items }}">
-      {{ tr.get('gallery_total_images', 'Images total') if tr else 'Images total' }}:
-      <span class="value">{{ filters.total_items }}</span>
+  <div class="gallery-clear-wrap d-flex flex-column gap-2 pb-2">
+    <div class="gallery-clear-meta d-flex flex-wrap gap-3 align-items-center">
+      <div class="text-muted small" id="gallery-total-count" data-count="{{ filters.total_items }}">
+        {{ tr.get('gallery_total_images', 'Images total') if tr else 'Images total' }}:
+        <span class="value">{{ filters.total_items }}</span>
+        <span class="mx-1">-</span>
+        {{ tr.get('gallery_selected_images', 'Images selected') if tr else 'Images selected' }}:
+        <span class="value" id="gallery-selected-count" data-selected="0">0</span>
+      </div>
+      <div id="gallery-selection" class="text-muted small"
+        data-empty-text="{{ tr.get('gallery_selection_hint', 'Select start and end to define a range.') if tr else 'Select start and end to define a range.' }}"
+        data-start-label="{{ tr.get('gallery_start_label', 'Start') if tr else 'Start' }}"
+        data-end-label="{{ tr.get('gallery_end_label', 'End') if tr else 'End' }}" data-sort="{{ filters.sort }}"
+        data-total-items="{{ filters.total_items }}" data-all-start="{{ range_all.start if range_all else '' }}"
+        data-all-end="{{ range_all.end if range_all else '' }}"
+        data-all-start-ts="{{ range_all.start_ts if range_all else '' }}"
+        data-all-end-ts="{{ range_all.end_ts if range_all else '' }}"></div>
     </div>
-    <div id="gallery-selection"
-         class="text-muted small"
-         data-empty-text="{{ tr.get('gallery_selection_hint', 'Select start and end to define a range.') if tr else 'Select start and end to define a range.' }}"
-         data-start-label="{{ tr.get('gallery_start_label', 'Start') if tr else 'Start' }}"
-         data-end-label="{{ tr.get('gallery_end_label', 'End') if tr else 'End' }}"
-         data-sort="{{ filters.sort }}"
-         data-total-items="{{ filters.total_items }}"
-         data-all-start="{{ range_all.start if range_all else '' }}"
-         data-all-end="{{ range_all.end if range_all else '' }}"
-         data-all-start-ts="{{ range_all.start_ts if range_all else '' }}"
-         data-all-end-ts="{{ range_all.end_ts if range_all else '' }}"></div>
-    <button id="gallery-select-all" class="btn btn-sm btn-outline-secondary" type="button" {% if not range_all %}disabled{% endif %}>
-      {{ tr.get('gallery_select_all', 'Select all') if tr else 'Select all' }}
-    </button>
-    <button id="gallery-clear-selection" class="btn btn-sm btn-outline-secondary" type="button">
-      {{ tr.get('gallery_clear_selection', 'Clear selection') if tr else 'Clear selection' }}
-    </button>
-    <button id="gallery-delete-selected" class="btn btn-sm btn-outline-danger" type="button" disabled>
-      {{ tr.get('gallery_delete_selected', 'Delete selected') if tr else 'Delete selected' }}
-    </button>
-    <div class="dropdown ms-auto">
-      <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-        {{ tr.get('gallery_timelapse_menu', 'Timelapse') if tr else 'Timelapse' }}
+    <div class="gallery-clear-actions d-flex flex-wrap gap-2 align-items-stretch">
+      <button id="gallery-select-all" class="btn btn-sm btn-outline-secondary" type="button" {% if not range_all
+        %}disabled{% endif %}>
+        {{ tr.get('gallery_select_all', 'Select all') if tr else 'Select all' }}
       </button>
-      <ul class="dropdown-menu dropdown-menu-end">
-        <li>
-          <span id="gallery-open-timelapse-wrap" class="d-inline-block">
-            <button id="gallery-open-timelapse" class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#timelapseModal" disabled>
-              {{ tr.get('gallery_create_timelapse', 'Create timelapse') if tr else 'Create timelapse' }}
-            </button>
-          </span>
-        </li>
-        <li>
-          <button id="gallery-timelapse-download" class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#timelapseListModal">
-            {{ tr.get('gallery_timelapse_download', 'Download timelapse') if tr else 'Download timelapse' }}
-          </button>
-        </li>
-      </ul>
+      <button id="gallery-clear-selection" class="btn btn-sm btn-outline-secondary" type="button" disabled>
+        {{ tr.get('gallery_clear_selection', 'Clear selection') if tr else 'Clear selection' }}
+      </button>
+      <button id="gallery-delete-selected" class="btn btn-sm btn-outline-danger" type="button" disabled>
+        {{ tr.get('gallery_delete_selected', 'Delete selected') if tr else 'Delete selected' }}
+      </button>
+      <button id="gallery-open-timelapse" class="btn btn-sm btn-outline-secondary w-100" type="button"
+        data-bs-toggle="modal" data-bs-target="#timelapseModal" disabled>
+        {{ tr.get('gallery_create_timelapse', 'Create timelapse') if tr else 'Create timelapse' }}
+      </button>
+      <button id="gallery-timelapse-download" class="btn btn-sm btn-outline-secondary" type="button"
+        data-bs-toggle="modal" data-bs-target="#timelapseListModal">
+        {{ tr.get('gallery_timelapse_download', 'Download timelapse') if tr else 'Download timelapse' }}
+      </button>
     </div>
   </div>
 </div>
@@ -90,12 +89,16 @@
     <button class="gallery-thumb" type="button" data-full="/pictures/{{ item.name }}" aria-label="{{ item.name }}">
       <img src="/pictures/{{ item.name }}" alt="{{ item.name }}" loading="lazy">
     </button>
-    <span class="gallery-badge gallery-badge-start">{{ tr.get('gallery_range_start', 'Start') if tr else 'Start' }}</span>
+    <span class="gallery-badge gallery-badge-start">{{ tr.get('gallery_range_start', 'Start') if tr else 'Start'
+      }}</span>
     <span class="gallery-badge gallery-badge-end">{{ tr.get('gallery_range_end', 'End') if tr else 'End' }}</span>
-    <button class="gallery-action gallery-mark-range" type="button" data-pick="{{ item.name }}" title="{{ tr.get('gallery_pick_first', 'Pick first') if tr else 'Pick first' }}">
+    <button class="gallery-action gallery-mark-range" type="button" data-pick="{{ item.name }}"
+      title="{{ tr.get('gallery_pick_first', 'Pick first') if tr else 'Pick first' }}">
       {{ tr.get('gallery_pick_first', 'Pick first') if tr else 'Pick first' }}
     </button>
-    <button class="gallery-delete" type="button" data-delete="{{ item.name }}" aria-label="{{ tr.get('gallery_delete_aria', 'Delete image') if tr else 'Delete image' }}" title="{{ tr.get('gallery_delete_title', 'Delete') if tr else 'Delete' }}">
+    <button class="gallery-delete" type="button" data-delete="{{ item.name }}"
+      aria-label="{{ tr.get('gallery_delete_aria', 'Delete image') if tr else 'Delete image' }}"
+      title="{{ tr.get('gallery_delete_title', 'Delete') if tr else 'Delete' }}">
       <i class="fa-solid fa-trash"></i>
     </button>
     <div class="gallery-meta">
@@ -118,90 +121,104 @@
   {% set window = 3 %}
   {% set start_page = current_page - window %}
   {% set end_page = current_page + window %}
-  {% if start_page < 1 %}{% set start_page = 1 %}{% endif %}
-  {% if end_page > total_pages %}{% set end_page = total_pages %}{% endif %}
+  {% if start_page < 1 %}{% set start_page=1 %}{% endif %} {% if end_page> total_pages %}{% set end_page = total_pages
+    %}{% endif %}
 
-  <a class="btn btn-outline-secondary {% if current_page <= 1 %}disabled{% endif %}"
-     href="/gallery?date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&limit={{ filters.limit }}&sort={{ filters.sort }}&page=1">
-     ««
-  </a>
-  <a class="btn btn-outline-secondary {% if current_page <= 1 %}disabled{% endif %}"
-     href="/gallery?date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&limit={{ filters.limit }}&sort={{ filters.sort }}&page={{ prev_page }}">
-     «
-  </a>
+    <a class="btn btn-outline-secondary {% if current_page <= 1 %}disabled{% endif %}"
+      href="/gallery?date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&limit={{ filters.limit }}&sort={{ filters.sort }}&page=1">
+      ««
+    </a>
+    <a class="btn btn-outline-secondary {% if current_page <= 1 %}disabled{% endif %}"
+      href="/gallery?date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&limit={{ filters.limit }}&sort={{ filters.sort }}&page={{ prev_page }}">
+      «
+    </a>
 
-  {% if start_page > 1 %}
-    <a class="btn btn-outline-secondary" href="/gallery?date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&limit={{ filters.limit }}&sort={{ filters.sort }}&page=1">1</a>
+    {% if start_page > 1 %}
+    <a class="btn btn-outline-secondary"
+      href="/gallery?date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&limit={{ filters.limit }}&sort={{ filters.sort }}&page=1">1</a>
     <span class="text-muted">…</span>
-  {% endif %}
+    {% endif %}
 
-  {% for p in range(start_page, end_page + 1) %}
+    {% for p in range(start_page, end_page + 1) %}
     <a class="btn {% if p == current_page %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-       href="/gallery?date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&limit={{ filters.limit }}&sort={{ filters.sort }}&page={{ p }}">{{ p }}</a>
-  {% endfor %}
+      href="/gallery?date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&limit={{ filters.limit }}&sort={{ filters.sort }}&page={{ p }}">{{
+      p }}</a>
+    {% endfor %}
 
-  {% if end_page < total_pages %}
-    <span class="text-muted">…</span>
-    <a class="btn btn-outline-secondary" href="/gallery?date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&limit={{ filters.limit }}&sort={{ filters.sort }}&page={{ total_pages }}">{{ total_pages }}</a>
-  {% endif %}
+    {% if end_page < total_pages %} <span class="text-muted">…</span>
+      <a class="btn btn-outline-secondary"
+        href="/gallery?date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&limit={{ filters.limit }}&sort={{ filters.sort }}&page={{ total_pages }}">{{
+        total_pages }}</a>
+      {% endif %}
 
-  <a class="btn btn-outline-secondary {% if current_page >= total_pages %}disabled{% endif %}"
-     href="/gallery?date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&limit={{ filters.limit }}&sort={{ filters.sort }}&page={{ next_page }}">
-     »
-  </a>
-  <a class="btn btn-outline-secondary {% if current_page >= total_pages %}disabled{% endif %}"
-     href="/gallery?date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&limit={{ filters.limit }}&sort={{ filters.sort }}&page={{ total_pages }}">
-     »»
-  </a>
+      <a class="btn btn-outline-secondary {% if current_page >= total_pages %}disabled{% endif %}"
+        href="/gallery?date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&limit={{ filters.limit }}&sort={{ filters.sort }}&page={{ next_page }}">
+        »
+      </a>
+      <a class="btn btn-outline-secondary {% if current_page >= total_pages %}disabled{% endif %}"
+        href="/gallery?date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&limit={{ filters.limit }}&sort={{ filters.sort }}&page={{ total_pages }}">
+        »»
+      </a>
 </div>
 {% else %}
-<div class="text-muted">{{ tr.get('gallery_empty', 'No images found for the selected filters.') if tr else 'No images found for the selected filters.' }}</div>
+<div class="text-muted">{{ tr.get('gallery_empty', 'No images found for the selected filters.') if tr else 'No images
+  found for the selected filters.' }}</div>
 {% endif %}
 
 <div class="modal fade" id="timelapseModal" tabindex="-1" aria-labelledby="timelapseModalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="timelapseModalLabel">{{ tr.get('gallery_timelapse_settings', 'Timelapse settings') if tr else 'Timelapse settings' }}</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ tr.get('close', 'Close') if tr else 'Close' }}"></button>
+        <h5 class="modal-title" id="timelapseModalLabel">{{ tr.get('gallery_timelapse_settings', 'Timelapse settings')
+          if tr else 'Timelapse settings' }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"
+          aria-label="{{ tr.get('close', 'Close') if tr else 'Close' }}"></button>
       </div>
       <div class="modal-body">
         <div class="mb-3">
-          <label class="form-label">{{ tr.get('gallery_timelapse_fps_input', 'Input FPS (speed)') if tr else 'Input FPS (speed)' }}</label>
+          <label class="form-label">{{ tr.get('gallery_timelapse_fps_input', 'Input FPS (speed)') if tr else 'Input FPS
+            (speed)' }}</label>
           <input type="number" class="form-control" id="timelapse-fps" min="1" max="120" value="25">
-          <div class="form-text">{{ tr.get('gallery_timelapse_fps_input_hint', 'Controls the timelapse speed/length.') if tr else 'Controls the timelapse speed/length.' }}</div>
+          <div class="form-text">{{ tr.get('gallery_timelapse_fps_input_hint', 'Controls the timelapse speed/length.')
+            if tr else 'Controls the timelapse speed/length.' }}</div>
         </div>
         <div class="mb-3">
-          <label class="form-label">{{ tr.get('gallery_timelapse_fps_output', 'Output FPS') if tr else 'Output FPS' }}</label>
+          <label class="form-label">{{ tr.get('gallery_timelapse_fps_output', 'Output FPS') if tr else 'Output FPS'
+            }}</label>
           <select class="form-select" id="timelapse-fps-output">
             {% for v in [15, 24, 25, 30, 50, 60] %}
-            <option value="{{ v }}" {% if v == 25 %}selected{% endif %}>{{ v }}</option>
+            <option value="{{ v }}" {% if v==25 %}selected{% endif %}>{{ v }}</option>
             {% endfor %}
           </select>
-          <div class="form-text">{{ tr.get('gallery_timelapse_fps_output_hint', 'Controls the output video framerate.') if tr else 'Controls the output video framerate.' }}</div>
+          <div class="form-text">{{ tr.get('gallery_timelapse_fps_output_hint', 'Controls the output video framerate.')
+            if tr else 'Controls the output video framerate.' }}</div>
         </div>
         <hr>
         <div class="mb-3">
           <label class="form-label d-flex justify-content-between">
             <span>
               {{ tr.get('gallery_timelapse_quality', 'Quality (CRF)') if tr else 'Quality (CRF)' }}
-              <a class="ms-1 small" href="https://trac.ffmpeg.org/wiki/Encode/H.264#a1.ChooseaCRFvalue" target="_blank" rel="noopener noreferrer">CRF?</a>
+              <a class="ms-1 small" href="https://trac.ffmpeg.org/wiki/Encode/H.264#a1.ChooseaCRFvalue" target="_blank"
+                rel="noopener noreferrer">CRF?</a>
             </span>
             <span class="text-muted small" id="timelapse-crf-label">23</span>
           </label>
           <input type="range" class="form-range" id="timelapse-crf" min="0" max="51" step="1" value="23">
-          <div class="form-text">{{ tr.get('gallery_timelapse_quality_hint', 'Lower is higher quality (larger files).') if tr else 'Lower is higher quality (larger files).' }}</div>
+          <div class="form-text">{{ tr.get('gallery_timelapse_quality_hint', 'Lower is higher quality (larger files).')
+            if tr else 'Lower is higher quality (larger files).' }}</div>
         </div>
         <hr>
         <div class="mt-2">
-          <label class="form-label">{{ tr.get('gallery_timelapse_resolution_presets', 'Resolution presets') if tr else 'Resolution presets' }}</label>
+          <label class="form-label">{{ tr.get('gallery_timelapse_resolution_presets', 'Resolution presets') if tr else
+            'Resolution presets' }}</label>
           <div class="d-flex flex-wrap gap-2">
             <button type="button" class="btn btn-sm btn-outline-secondary" data-preset="2160p">4K (2160p)</button>
             <button type="button" class="btn btn-sm btn-outline-secondary" data-preset="1440p">1440p</button>
             <button type="button" class="btn btn-sm btn-outline-secondary" data-preset="1080p">1080p</button>
             <button type="button" class="btn btn-sm btn-outline-secondary" data-preset="720p">720p</button>
             <button type="button" class="btn btn-sm btn-outline-secondary" data-preset="480p">480p</button>
-            <button type="button" class="btn btn-sm btn-outline-secondary" data-preset="orig">{{ tr.get('gallery_timelapse_preset_original', 'Original size') if tr else 'Original size' }}</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-preset="orig">{{
+              tr.get('gallery_timelapse_preset_original', 'Original size') if tr else 'Original size' }}</button>
           </div>
         </div>
         <div class="row g-2 mt-2">
@@ -213,51 +230,60 @@
             <label class="form-label">{{ tr.get('gallery_timelapse_height', 'Height') if tr else 'Height' }}</label>
             <input type="number" class="form-control" id="timelapse-height" min="1" placeholder="1080">
           </div>
+          <div class="form-text mt-2">{{ tr.get('gallery_timelapse_scale_hint', 'Leave width/height empty to keep
+            original size.') if tr else 'Leave width/height empty to keep original size.' }}</div>
         </div>
         <hr>
         <div class="mt-2">
           <label class="form-label d-flex justify-content-between">
             <span>{{ tr.get('gallery_timelapse_preset', 'Preset') if tr else 'Preset' }}</span>
-            <span class="text-muted small">{{ tr.get('gallery_timelapse_preset_hint', 'Slower = better compression, faster = less CPU') if tr else 'Slower = better compression, faster = less CPU' }}</span>
+            <span class="text-muted small">{{ tr.get('gallery_timelapse_preset_hint', 'Slower = better compression,
+              faster = less CPU') if tr else 'Slower = better compression, faster = less CPU' }}</span>
           </label>
           <select class="form-select" id="timelapse-preset">
             {% for p in ['ultrafast','superfast','veryfast','faster','fast','medium','slow','slower','veryslow'] %}
-            <option value="{{ p }}" {% if p == 'medium' %}selected{% endif %}>{{ p }}</option>
+            <option value="{{ p }}" {% if p=='medium' %}selected{% endif %}>{{ p }}</option>
             {% endfor %}
           </select>
         </div>
-        <div class="form-text mt-2">{{ tr.get('gallery_timelapse_scale_hint', 'Leave width/height empty to keep original size.') if tr else 'Leave width/height empty to keep original size.' }}</div>
       </div>
       <div class="modal-footer">
         <div class="text-muted small me-auto" id="timelapse-length">
           {{ tr.get('gallery_timelapse_length', 'Length') if tr else 'Length' }}: —
         </div>
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ tr.get('close', 'Close') if tr else 'Close' }}</button>
-        <button type="button" class="btn btn-outline-secondary" id="timelapse-reset">{{ tr.get('gallery_timelapse_reset', 'Reset') if tr else 'Reset' }}</button>
-        <button type="button" class="btn btn-success" id="timelapse-export">{{ tr.get('gallery_timelapse_export', 'Export') if tr else 'Export' }}</button>
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ tr.get('close', 'Close') if
+          tr else 'Close' }}</button>
+        <button type="button" class="btn btn-outline-secondary" id="timelapse-reset">{{
+          tr.get('gallery_timelapse_reset', 'Reset') if tr else 'Reset' }}</button>
+        <button type="button" class="btn btn-success" id="timelapse-export">{{ tr.get('gallery_timelapse_export',
+          'Export') if tr else 'Export' }}</button>
       </div>
     </div>
   </div>
 </div>
 
-<div class="modal fade" id="timelapseListModal" tabindex="-1" aria-labelledby="timelapseListModalLabel" aria-hidden="true">
+<div class="modal fade" id="timelapseListModal" tabindex="-1" aria-labelledby="timelapseListModalLabel"
+  aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="timelapseListModalLabel">{{ tr.get('gallery_timelapse_list_title', 'Timelapse videos') if tr else 'Timelapse videos' }}</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ tr.get('close', 'Close') if tr else 'Close' }}"></button>
+        <h5 class="modal-title" id="timelapseListModalLabel">{{ tr.get('gallery_timelapse_list_title', 'Timelapse
+          videos') if tr else 'Timelapse videos' }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"
+          aria-label="{{ tr.get('close', 'Close') if tr else 'Close' }}"></button>
       </div>
       <div class="modal-body">
-        <div id="timelapse-list-empty" class="text-muted">{{ tr.get('gallery_timelapse_list_empty', 'No timelapse videos found.') if tr else 'No timelapse videos found.' }}</div>
+        <div id="timelapse-list-empty" class="text-muted">{{ tr.get('gallery_timelapse_list_empty', 'No timelapse videos
+          found.') if tr else 'No timelapse videos found.' }}</div>
         <div class="table-responsive mt-2">
           <table class="table table-sm align-middle" id="timelapse-list-table" style="display:none;">
             <thead>
-      <tr>
-        <th scope="col">{{ tr.get('gallery_timelapse_list_name', 'Name') if tr else 'Name' }}</th>
-        <th scope="col">{{ tr.get('gallery_timelapse_list_created', 'Created') if tr else 'Created' }}</th>
-        <th scope="col">{{ tr.get('gallery_timelapse_list_size', 'Size') if tr else 'Size' }}</th>
-        <th scope="col"></th>
-      </tr>
+              <tr>
+                <th scope="col">{{ tr.get('gallery_timelapse_list_name', 'Name') if tr else 'Name' }}</th>
+                <th scope="col">{{ tr.get('gallery_timelapse_list_created', 'Created') if tr else 'Created' }}</th>
+                <th scope="col">{{ tr.get('gallery_timelapse_list_size', 'Size') if tr else 'Size' }}</th>
+                <th scope="col"></th>
+              </tr>
             </thead>
             <tbody id="timelapse-list-body"></tbody>
           </table>
@@ -267,7 +293,8 @@
         <button type="button" class="btn btn-outline-secondary" id="timelapse-list-refresh">
           {{ tr.get('gallery_timelapse_list_refresh', 'Refresh') if tr else 'Refresh' }}
         </button>
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ tr.get('close', 'Close') if tr else 'Close' }}</button>
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ tr.get('close', 'Close') if
+          tr else 'Close' }}</button>
       </div>
     </div>
   </div>
@@ -302,7 +329,7 @@
 
     document.addEventListener('click', (event) => {
       if (event.target.classList.contains('gallery-lightbox-backdrop') ||
-          event.target.classList.contains('gallery-lightbox-close')) {
+        event.target.classList.contains('gallery-lightbox-close')) {
         closeLightbox();
       }
     });
@@ -376,7 +403,7 @@
     const pickButtons = Array.from(document.querySelectorAll('.gallery-mark-range'));
     const storageKey = 'capturelapse_gallery_range';
     const openBtn = document.getElementById('gallery-open-timelapse');
-    const openWrap = document.getElementById('gallery-open-timelapse-wrap');
+    const selectedCountEl = document.getElementById('gallery-selected-count');
     const pickFirstLabel = '{{ tr.get("gallery_pick_first", "Pick first") if tr else "Pick first" }}';
     const pickLastLabel = '{{ tr.get("gallery_pick_last", "Pick last") if tr else "Pick last" }}';
     const deleteSelectedLabel = '{{ tr.get("gallery_delete_selected", "Delete selected") if tr else "Delete selected" }}';
@@ -384,6 +411,7 @@
     const deleteSelectedSuccess = '{{ tr.get("gallery_delete_selected_success", "Selected images deleted.") if tr else "Selected images deleted." }}';
     const deleteSelectedFailed = '{{ tr.get("gallery_delete_selected_failed", "Failed to delete selected images.") if tr else "Failed to delete selected images." }}';
     const deleteSelectedEmpty = '{{ tr.get("gallery_delete_selected_empty", "No images selected.") if tr else "No images selected." }}';
+    let selectedCountToken = 0;
 
     function loadRange() {
       try {
@@ -408,6 +436,45 @@
     function findCardByName(name) {
       if (!name) return null;
       return document.querySelector(`.gallery-card[data-name="${CSS.escape(name)}"]`);
+    }
+
+    async function updateSelectedCount() {
+      if (!selectedCountEl) return;
+      const token = ++selectedCountToken;
+      let count = 0;
+      const startName = range.start || range.end;
+      const endName = range.end || range.start;
+      const allStart = selectionBox ? selectionBox.dataset.allStart : '';
+      const allEnd = selectionBox ? selectionBox.dataset.allEnd : '';
+      const totalItems = selectionBox ? Number(selectionBox.dataset.totalItems || '') : NaN;
+
+      if (startName && endName) {
+        if (startName === endName) {
+          count = 1;
+        } else if (allStart && allEnd && startName === allStart && endName === allEnd && Number.isFinite(totalItems)) {
+          count = totalItems;
+        } else {
+          try {
+            const res = await fetch('/gallery/range-count', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ start: startName, end: endName }),
+            });
+            if (res.ok) {
+              const data = await res.json();
+              if (data && typeof data.count === 'number') {
+                count = data.count;
+              }
+            }
+          } catch (err) { }
+        }
+      } else if (startName || endName) {
+        count = 1;
+      }
+
+      if (token !== selectedCountToken) return;
+      selectedCountEl.textContent = String(Math.max(0, count));
+      selectedCountEl.dataset.selected = String(Math.max(0, count));
     }
 
     function updateRangeUI(range) {
@@ -448,20 +515,10 @@
         }
       }
       if (clearBtn) {
-        if (range.start || range.end) {
-          clearBtn.classList.add('is-visible');
-        } else {
-          clearBtn.classList.remove('is-visible');
-        }
+        clearBtn.disabled = !(range.start || range.end);
       }
       if (deleteSelectedBtn) {
-        if (range.start || range.end) {
-          deleteSelectedBtn.disabled = false;
-          deleteSelectedBtn.classList.add('is-visible');
-        } else {
-          deleteSelectedBtn.disabled = true;
-          deleteSelectedBtn.classList.remove('is-visible');
-        }
+        deleteSelectedBtn.disabled = !(range.start || range.end);
       }
       if (openBtn) {
         const enabled = Boolean(range.start || range.end);
@@ -472,6 +529,7 @@
         btn.textContent = pickLabel;
         btn.setAttribute('title', pickLabel);
       });
+      updateSelectedCount();
     }
 
     const statusTarget = document.getElementById('gallery-status') || document.getElementById('global-status');
@@ -586,7 +644,7 @@
                 count = data.count;
               }
             }
-          } catch (err) {}
+          } catch (err) { }
         }
         if (!count) {
           showStatus(deleteSelectedEmpty, 'warning');
@@ -689,7 +747,7 @@
         if (heightInput && data.height) heightInput.value = data.height;
         if (presetSelect && data.preset) presetSelect.value = data.preset;
         applyCrfLabel();
-      } catch (err) {}
+      } catch (err) { }
     }
 
     function saveSettings() {
@@ -744,7 +802,7 @@
               count = data.count;
             }
           }
-        } catch (err) {}
+        } catch (err) { }
       }
       const fps = Number(fpsInput ? fpsInput.value : 25) || 25;
       const seconds = count > 0 ? count / fps : 0;
@@ -874,7 +932,7 @@
             sessionStorage.removeItem(watchKey);
           }
           if (createBtn) createBtn.disabled = false;
-        } catch (err) {}
+        } catch (err) { }
       };
       poll();
     }
@@ -894,25 +952,25 @@
           const res = await fetch('/timelapse', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            start: range.start,
-            end: range.end,
-            fps: settings.fps || 25,
-            fps_output: settings.fps_output || 25,
-            crf: settings.crf || 23,
-            width: settings.width || null,
-            height: settings.height || null,
+            body: JSON.stringify({
+              start: range.start,
+              end: range.end,
+              fps: settings.fps || 25,
+              fps_output: settings.fps_output || 25,
+              crf: settings.crf || 23,
+              width: settings.width || null,
+              height: settings.height || null,
               preset: settings.preset || 'medium',
             }),
           });
           if (!res.ok) {
-          if (res.status === 409) {
-            showStatus('{{ tr.get("gallery_timelapse_running", "Timelapse is already running.") if tr else "Timelapse is already running." }}', 'warning');
-            showGlobalStatus('{{ tr.get("gallery_timelapse_running", "Timelapse is already running.") if tr else "Timelapse is already running." }}', 'warning');
-            sessionStorage.setItem(watchKey, '1');
-            startStatusPolling();
-            return;
-          }
+            if (res.status === 409) {
+              showStatus('{{ tr.get("gallery_timelapse_running", "Timelapse is already running.") if tr else "Timelapse is already running." }}', 'warning');
+              showGlobalStatus('{{ tr.get("gallery_timelapse_running", "Timelapse is already running.") if tr else "Timelapse is already running." }}', 'warning');
+              sessionStorage.setItem(watchKey, '1');
+              startStatusPolling();
+              return;
+            }
             throw new Error(`timelapse_failed_${res.status}`);
           }
           if (window.bootstrap) {
@@ -1107,6 +1165,3 @@
   })();
 </script>
 {% endblock %}
-
-
-

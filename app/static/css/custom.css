@@ -89,8 +89,8 @@ body.modal-open .navbar {
   display: block;
 }
 .gallery-card.is-selected {
-  border-color: rgba(13, 110, 253, 0.8);
-  outline: 2px solid rgba(13, 110, 253, 0.5);
+  border-color: rgba(1, 207, 190, 0.8);
+  outline: 2px solid rgba(1, 207, 190, 0.8);
   outline-offset: 0;
 }
 .gallery-badge {
@@ -109,6 +109,8 @@ body.modal-open .navbar {
 }
 .gallery-card.is-end .gallery-badge-end {
   display: inline-block;
+  left: 0.6rem;
+  right: auto;
 }
 .gallery-card.is-end .gallery-badge-end {
   background: rgba(25, 135, 84, 0.85);
@@ -159,6 +161,12 @@ body.modal-open .navbar {
 .gallery-action:hover {
   background: rgba(0, 0, 0, 0.75);
 }
+@media (hover: none) {
+  .gallery-delete,
+  .gallery-action {
+    opacity: 1;
+  }
+}
 .gallery-meta {
   margin-top: 0.5rem;
 }
@@ -174,17 +182,11 @@ body.modal-open .navbar {
   min-height: 2.2rem;
   margin-bottom: 1rem;
 }
-#gallery-clear-selection {
-  visibility: hidden;
+.gallery-clear-actions > * {
+  flex: 1 1 180px;
 }
-#gallery-clear-selection.is-visible {
-  visibility: visible;
-}
-#gallery-delete-selected {
-  visibility: hidden;
-}
-#gallery-delete-selected.is-visible {
-  visibility: visible;
+.gallery-clear-actions .btn {
+  width: 100%;
 }
 
 .gallery-toolbar {
@@ -210,20 +212,8 @@ body.modal-open .navbar {
     font-size: 0.8rem;
   }
   .gallery-clear-wrap {
-    flex-direction: column;
     align-items: stretch;
     gap: 0.5rem;
-  }
-  .gallery-clear-wrap .btn,
-  .gallery-clear-wrap .dropdown {
-    width: 100%;
-  }
-  .gallery-clear-wrap .dropdown .btn {
-    width: 100%;
-    text-align: left;
-  }
-  .gallery-clear-wrap .dropdown-menu {
-    width: 100%;
   }
 }
 

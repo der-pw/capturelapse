@@ -118,6 +118,7 @@
   "gallery_end_before_start": "Ende muss nach Start liegen.",
   "gallery_clear_selection": "Auswahl zurücksetzen",
   "gallery_total_images": "Bilder insg.",
+  "gallery_selected_images": "Bilder ausgew\u00e4hlt",
   "gallery_delete_selected": "Ausgewählte löschen",
   "gallery_delete_selected_confirm": "{count} ausgewählte Bilder löschen?",
   "gallery_delete_selected_success": "Ausgewählte Bilder gelöscht.",

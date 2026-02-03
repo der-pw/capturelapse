@@ -118,6 +118,7 @@
   "gallery_end_before_start": "End must be later than Start.",
   "gallery_clear_selection": "Reset selection",
   "gallery_total_images": "Images total",
+  "gallery_selected_images": "Images selected",
   "gallery_delete_selected": "Delete selected",
   "gallery_delete_selected_confirm": "Delete {count} selected images?",
   "gallery_delete_selected_success": "Selected images deleted.",
