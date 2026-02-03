@@ -120,7 +120,8 @@
         }
         const data = await res.json();
         if (data.state === 'running') {
-          const percent = typeof data.progress === 'number' ? Math.max(0, Math.min(100, data.progress)) : null;
+          const percentRaw = Number(data.progress);
+          const percent = Number.isFinite(percentRaw) ? Math.max(0, Math.min(100, percentRaw)) : null;
           const suffix = percent !== null
             ? (percent >= 100 ? ` ${labelFinalizing}` : ` ${percent}%`)
             : '';
