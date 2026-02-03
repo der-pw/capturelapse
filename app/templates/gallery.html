@@ -795,9 +795,7 @@
         error: '{{ tr.get("gallery_timelapse_status_error", "Timelapse failed.") if tr else "Timelapse failed." }}',
       };
       let lastOutput = null;
-      let listRefreshAfterDone = false;
       let lastTimelapseState = null;
-      let pendingListRefresh = false;
       const poll = async () => {
         try {
           const res = await fetch('/timelapse/status');
@@ -918,11 +916,14 @@
       });
     }
 
+    const downloadBtn = document.getElementById('gallery-timelapse-download');
     const listModalEl = document.getElementById('timelapseListModal');
     const listBody = document.getElementById('timelapse-list-body');
     const listTable = document.getElementById('timelapse-list-table');
     const listEmpty = document.getElementById('timelapse-list-empty');
     const listRefresh = document.getElementById('timelapse-list-refresh');
+    let listRefreshAfterDone = false;
+    let pendingListRefresh = false;
     const listLabels = {
       download: '{{ tr.get("gallery_timelapse_list_download", "Download") if tr else "Download" }}',
       delete: '{{ tr.get("gallery_timelapse_list_delete", "Delete") if tr else "Delete" }}',
@@ -963,8 +964,13 @@
       }
     }
 
+    let listLoadToken = 0;
+    let listLoadInFlight = false;
     async function loadTimelapseList() {
       if (!listBody || !listTable || !listEmpty) return;
+      if (listLoadInFlight) return;
+      listLoadInFlight = true;
+      const token = ++listLoadToken;
       listBody.innerHTML = '';
       listTable.style.display = 'none';
       listEmpty.style.display = '';
@@ -975,6 +981,7 @@
         ]);
         if (!listRes.ok) throw new Error(`list_failed_${listRes.status}`);
         const data = await listRes.json();
+        if (token !== listLoadToken) return;
         let renderingName = null;
         if (statusRes.ok) {
           const statusData = await statusRes.json();
@@ -1050,6 +1057,10 @@
       } catch (err) {
         listEmpty.style.display = '';
         listTable.style.display = 'none';
+      } finally {
+        if (token === listLoadToken) {
+          listLoadInFlight = false;
+        }
       }
     }
 
@@ -1064,14 +1075,6 @@
         if (listBody && !listBody.children.length) {
           loadTimelapseList();
         }
-      });
-    }
-    if (downloadBtn) {
-      downloadBtn.addEventListener('click', () => {
-        if (pendingListRefresh) {
-          pendingListRefresh = false;
-        }
-        loadTimelapseList();
       });
     }
     if (listRefresh) {
