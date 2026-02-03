@@ -808,6 +808,7 @@
           }
           lastTimelapseState = data.state;
           if (data.state === 'running') {
+            pendingListRefresh = true;
             const percentRaw = Number(data.progress);
             const percent = Number.isFinite(percentRaw) ? Math.max(0, Math.min(100, percentRaw)) : null;
             const suffix = percent !== null
@@ -833,9 +834,9 @@
             if (createBtn) createBtn.disabled = false;
             const listModalEl = document.getElementById('timelapseListModal');
             if (listModalEl && listModalEl.classList.contains('show')) {
-              if (listRefreshAfterDone || pendingListRefresh) {
-                listRefreshAfterDone = false;
+              if (pendingListRefresh || listRefreshAfterDone) {
                 pendingListRefresh = false;
+                listRefreshAfterDone = false;
                 loadTimelapseList();
               }
             }
@@ -1074,7 +1075,11 @@
       });
     }
     if (listRefresh) {
-      listRefresh.addEventListener('click', loadTimelapseList);
+      listRefresh.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        loadTimelapseList();
+      });
     }
   })();
 </script>
