@@ -90,9 +90,10 @@
     const target = document.getElementById('global-status');
     if (!target) return;
 
-    const labelRunning = target.dataset.labelRunning || 'Timelapse running...';
-    const labelDone = target.dataset.labelDone || 'Timelapse finished.';
-    const labelError = target.dataset.labelError || 'Timelapse failed.';
+        const labelRunning = target.dataset.labelRunning || 'Rendering...';
+        const labelDone = target.dataset.labelDone || 'Timelapse finished.';
+        const labelError = target.dataset.labelError || 'Timelapse failed.';
+        const labelFinalizing = target.dataset.labelFinalizing || 'Finalizing...';
     const watchKey = 'capturelapse_timelapse_watch';
     const runningPollMs = 3000;
     const idlePollMs = 10000;
@@ -120,7 +121,9 @@
         const data = await res.json();
         if (data.state === 'running') {
           const percent = typeof data.progress === 'number' ? Math.max(0, Math.min(100, data.progress)) : null;
-          const suffix = percent !== null ? ` ${percent}%` : '';
+          const suffix = percent !== null
+            ? (percent >= 100 ? ` ${labelFinalizing}` : ` ${percent}%`)
+            : '';
           showGlobal(`${labelRunning}${suffix}`, 'info', { sticky: true });
           sessionStorage.setItem(watchKey, '1');
           nextDelay = runningPollMs;

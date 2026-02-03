@@ -20,9 +20,10 @@
       <div class="collapse navbar-collapse" id="navbarNav">
         <div class="navbar-status mx-3 flex-grow-1">
           <div id="global-status"
-               data-label-running="{{ tr.get('gallery_timelapse_status_running', 'Timelapse running...') if tr else 'Timelapse running...' }}"
+               data-label-running="{{ tr.get('gallery_timelapse_status_running', 'Rendering...') if tr else 'Rendering...' }}"
                data-label-done="{{ tr.get('gallery_timelapse_status_done', 'Timelapse finished.') if tr else 'Timelapse finished.' }}"
-               data-label-error="{{ tr.get('gallery_timelapse_status_error', 'Timelapse failed.') if tr else 'Timelapse failed.' }}"></div>
+               data-label-error="{{ tr.get('gallery_timelapse_status_error', 'Timelapse failed.') if tr else 'Timelapse failed.' }}"
+               data-label-finalizing="{{ tr.get('gallery_timelapse_status_finalizing', 'Finalizing...') if tr else 'Finalizing...' }}"></div>
         </div>
         <ul class="navbar-nav ms-auto">
           <li class="nav-item"><a class="nav-link" href="/">{{ tr['nav_dashboard'] if tr else 'Dashboard' }}</a></li>
