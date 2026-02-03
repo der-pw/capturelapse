@@ -1053,7 +1053,20 @@
     }
 
     if (listModalEl) {
+      listModalEl.addEventListener('show.bs.modal', () => {
+        if (pendingListRefresh) {
+          pendingListRefresh = false;
+        }
+        loadTimelapseList();
+      });
       listModalEl.addEventListener('shown.bs.modal', () => {
+        if (listBody && !listBody.children.length) {
+          loadTimelapseList();
+        }
+      });
+    }
+    if (downloadBtn) {
+      downloadBtn.addEventListener('click', () => {
         if (pendingListRefresh) {
           pendingListRefresh = false;
         }

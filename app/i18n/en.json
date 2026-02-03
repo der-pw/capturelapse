@@ -150,7 +150,7 @@
   "gallery_timelapse_failed": "Timelapse failed to start.",
   "gallery_timelapse_running": "Timelapse is already running.",
   "gallery_timelapse_status_running": "Rendering...",
-  "gallery_timelapse_status_finalizing": "Finalizing...",
+  "gallery_timelapse_status_finalizing": "finalizing...",
   "gallery_timelapse_status_done": "Timelapse finished.",
   "gallery_timelapse_status_error": "Timelapse failed.",
   "gallery_timelapse_download": "Download timelapse",

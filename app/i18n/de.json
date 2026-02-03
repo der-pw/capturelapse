@@ -150,7 +150,7 @@
   "gallery_timelapse_failed": "Zeitraffer konnte nicht gestartet werden.",
   "gallery_timelapse_running": "Zeitraffer läuft bereits.",
   "gallery_timelapse_status_running": "Render läuft...",
-  "gallery_timelapse_status_finalizing": "Finalisiere...",
+  "gallery_timelapse_status_finalizing": "finalisiere...",
   "gallery_timelapse_status_done": "Zeitraffer abgeschlossen.",
   "gallery_timelapse_status_error": "Zeitraffer fehlgeschlagen.",
   "gallery_timelapse_download": "Zeitraffer herunterladen",
