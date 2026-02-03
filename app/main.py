@@ -48,7 +48,7 @@ app.mount(
 )
 
 # === Templates ===
-APP_VERSION = "0.9.8-beta"
+APP_VERSION = "0.9.9-beta"
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 templates.env.globals["app_version"] = APP_VERSION
 IMAGE_STATS_TTL_SECONDS = 60
@@ -835,6 +835,7 @@ async def create_timelapse(payload: dict = Body(...)):
     start_name = (payload.get("start") or "").strip()
     end_name = (payload.get("end") or "").strip()
     fps = int(payload.get("fps") or 25)
+    fps_output = int(payload.get("fps_output") or 25)
     crf = int(payload.get("crf") or 23)
     preset = (payload.get("preset") or "medium").strip().lower()
     width = payload.get("width")
@@ -843,6 +844,8 @@ async def create_timelapse(payload: dict = Body(...)):
         raise HTTPException(status_code=400, detail="start_end_required")
     if fps < 1 or fps > 120:
         raise HTTPException(status_code=400, detail="invalid_fps")
+    if fps_output < 1 or fps_output > 120:
+        raise HTTPException(status_code=400, detail="invalid_fps_output")
     if crf < 0 or crf > 51:
         raise HTTPException(status_code=400, detail="invalid_crf")
     allowed_presets = {
@@ -936,6 +939,7 @@ async def create_timelapse(payload: dict = Body(...)):
         "-pix_fmt", "yuv420p",
         "-crf", str(crf),
         "-preset", preset,
+        "-r", str(fps_output),
         "-progress", "pipe:1",
         "-nostats",
         str(output_path),

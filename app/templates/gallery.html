@@ -167,8 +167,18 @@
       </div>
       <div class="modal-body">
         <div class="mb-3">
-          <label class="form-label">{{ tr.get('gallery_timelapse_fps', 'FPS') if tr else 'FPS' }}</label>
+          <label class="form-label">{{ tr.get('gallery_timelapse_fps_input', 'Input FPS (speed)') if tr else 'Input FPS (speed)' }}</label>
           <input type="number" class="form-control" id="timelapse-fps" min="1" max="120" value="25">
+          <div class="form-text">{{ tr.get('gallery_timelapse_fps_input_hint', 'Controls the timelapse speed/length.') if tr else 'Controls the timelapse speed/length.' }}</div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">{{ tr.get('gallery_timelapse_fps_output', 'Output FPS') if tr else 'Output FPS' }}</label>
+          <select class="form-select" id="timelapse-fps-output">
+            {% for v in [15, 24, 25, 30, 50, 60] %}
+            <option value="{{ v }}" {% if v == 25 %}selected{% endif %}>{{ v }}</option>
+            {% endfor %}
+          </select>
+          <div class="form-text">{{ tr.get('gallery_timelapse_fps_output_hint', 'Controls the output video framerate.') if tr else 'Controls the output video framerate.' }}</div>
         </div>
         <hr>
         <div class="mb-3">
@@ -647,6 +657,7 @@
 
     const watchKey = 'capturelapse_timelapse_watch';
     const fpsInput = document.getElementById('timelapse-fps');
+    const fpsOutputInput = document.getElementById('timelapse-fps-output');
     const lengthEl = document.getElementById('timelapse-length');
     const crfInput = document.getElementById('timelapse-crf');
     const crfLabel = document.getElementById('timelapse-crf-label');
@@ -672,6 +683,7 @@
         if (!raw) return;
         const data = JSON.parse(raw);
         if (fpsInput && data.fps) fpsInput.value = data.fps;
+        if (fpsOutputInput && data.fps_output) fpsOutputInput.value = data.fps_output;
         if (crfInput && data.crf !== undefined) crfInput.value = data.crf;
         if (widthInput && data.width) widthInput.value = data.width;
         if (heightInput && data.height) heightInput.value = data.height;
@@ -683,6 +695,7 @@
     function saveSettings() {
       const settings = {
         fps: fpsInput ? Number(fpsInput.value || 25) : 25,
+        fps_output: fpsOutputInput ? Number(fpsOutputInput.value || 25) : 25,
         crf: crfInput ? Number(crfInput.value || 23) : 23,
         width: widthInput ? (widthInput.value || '') : '',
         height: heightInput ? (heightInput.value || '') : '',
@@ -740,6 +753,7 @@
 
     function resetSettings() {
       if (fpsInput) fpsInput.value = 25;
+      if (fpsOutputInput) fpsOutputInput.value = 25;
       if (crfInput) crfInput.value = 23;
       if (widthInput) widthInput.value = '';
       if (heightInput) heightInput.value = '';
@@ -756,6 +770,11 @@
     }
     if (fpsInput) {
       fpsInput.addEventListener('input', updateTimelapseLength);
+    }
+    if (fpsOutputInput) {
+      fpsOutputInput.addEventListener('input', () => {
+        saveSettings();
+      });
     }
     presetButtons.forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -875,13 +894,14 @@
           const res = await fetch('/timelapse', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              start: range.start,
-              end: range.end,
-              fps: settings.fps || 25,
-              crf: settings.crf || 23,
-              width: settings.width || null,
-              height: settings.height || null,
+          body: JSON.stringify({
+            start: range.start,
+            end: range.end,
+            fps: settings.fps || 25,
+            fps_output: settings.fps_output || 25,
+            crf: settings.crf || 23,
+            width: settings.width || null,
+            height: settings.height || null,
               preset: settings.preset || 'medium',
             }),
           });
