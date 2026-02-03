@@ -48,7 +48,7 @@ app.mount(
 )
 
 # === Templates ===
-APP_VERSION = "0.9.7-beta"
+APP_VERSION = "0.9.8-beta"
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 templates.env.globals["app_version"] = APP_VERSION
 IMAGE_STATS_TTL_SECONDS = 60
@@ -930,8 +930,8 @@ async def create_timelapse(payload: dict = Body(...)):
         "-y",
         "-f", "concat",
         "-safe", "0",
-        "-i", str(list_path),
         "-r", str(fps),
+        "-i", str(list_path),
         "-c:v", "libx264",
         "-pix_fmt", "yuv420p",
         "-crf", str(crf),
@@ -959,6 +959,7 @@ async def create_timelapse(payload: dict = Body(...)):
                     "count": count,
                     "progress": 0,
                 })
+            log("info", f"FFmpeg command: {cmd}")
             proc = subprocess.Popen(
                 cmd,
                 cwd=str(save_dir),
