@@ -171,11 +171,11 @@ endblock %}
     <!-- hier 2 Datepicker -->
     <div class="col-md-3">
       <label class="form-label">{{ tr.get("date_from", "Start date") if tr else "Start date" }}</label>
-      <input type="date" class="form-control" name="DATE_FROM" value="{{ cfg.schedule_start_date or '' }}">
+      <input type="date" class="form-control date-input-icon" name="DATE_FROM" value="{{ cfg.schedule_start_date or '' }}">
     </div>
     <div class="col-md-3">
       <label class="form-label">{{ tr.get("date_to", "End date") if tr else "End date" }}</label>
-      <input type="date" class="form-control" name="DATE_TO" value="{{ cfg.schedule_end_date or '' }}">
+      <input type="date" class="form-control date-input-icon" name="DATE_TO" value="{{ cfg.schedule_end_date or '' }}">
     </div>
     <div class="col-md-2 d-flex align-items-end">
       <button class="btn btn-outline-secondary w-100" type="button" id="clear-date-range">
@@ -281,6 +281,5 @@ endblock %}
 {% block scripts %}
 <script src="{{ url_for('static', path='js/settings.js') }}?v={{ app_version }}"></script>
 {% endblock %}
-
 
 

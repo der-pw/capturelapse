@@ -10,15 +10,15 @@
 
 <div class="gallery-toolbar px-3">
   <form class="row g-3 align-items-end mb-4 gallery-filter-form" method="get" action="/gallery">
-    <div class="col-6 col-md-2">
+    <div class="col-6 col-md-3 col-lg-2">
       <label class="form-label">{{ tr.get('gallery_filter_from', 'From') if tr else 'From' }}</label>
-      <input type="date" class="form-control" name="date_from" value="{{ filters.date_from }}">
+      <input type="date" class="form-control date-input-icon" name="date_from" value="{{ filters.date_from }}">
     </div>
-    <div class="col-6 col-md-2">
+    <div class="col-6 col-md-3 col-lg-2">
       <label class="form-label">{{ tr.get('gallery_filter_to', 'To') if tr else 'To' }}</label>
-      <input type="date" class="form-control" name="date_to" value="{{ filters.date_to }}">
+      <input type="date" class="form-control date-input-icon" name="date_to" value="{{ filters.date_to }}">
     </div>
-    <div class="col-6 col-md-1">
+    <div class="col-6 col-md-2 col-lg-1">
       <label class="form-label">{{ tr.get('gallery_filter_limit', 'Limit') if tr else 'Limit' }}</label>
       <select class="form-select" name="limit">
         {% for v in [50, 100, 200, 500, 1000, 2000] %}
@@ -26,7 +26,7 @@
         {% endfor %}
       </select>
     </div>
-    <div class="col-6 col-md-2">
+    <div class="col-6 col-md-2 col-lg-2">
       <label class="form-label">{{ tr.get('gallery_filter_sort', 'Sort') if tr else 'Sort' }}</label>
       <select class="form-select" name="sort">
         <option value="desc" {% if filters.sort=='desc' %}selected{% endif %}>{{ tr.get('gallery_sort_desc', 'Newest
@@ -36,7 +36,7 @@
       </select>
     </div>
     <input type="hidden" name="page" value="1">
-    <div class="col-12 col-md-1 d-grid">
+    <div class="col-12 col-md-2 col-lg-1 d-grid">
       <button class="btn btn-outline-secondary" type="submit">{{ tr.get('gallery_filter_apply', 'Apply') if tr else
         'Apply' }}</button>
     </div>

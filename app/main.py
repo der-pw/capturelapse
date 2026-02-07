@@ -19,9 +19,18 @@ import re
 
 from app.config_manager import load_config, save_config, resolve_save_dir, PICTURES_DIR
 from app.models import ConfigModel
-from app.scheduler import start_scheduler, stop_scheduler, cfg_lock, cfg, set_paused, is_active_time, get_next_snapshot_iso
+from app.scheduler import (
+    start_scheduler,
+    stop_scheduler,
+    cfg_lock,
+    cfg_thread_lock,
+    cfg,
+    set_paused,
+    is_active_time,
+    get_next_snapshot_iso,
+)
 from app import i18n
-from app.broadcast_manager import add_client, remove_client, broadcast
+from app.broadcast_manager import add_client, remove_client, broadcast, set_main_loop
 from app.logger_utils import log
 from app.downloader import take_snapshot, check_camera_health
 from app.sunrise_utils import get_sun_times
@@ -224,20 +233,21 @@ def _register_success(ip: str) -> None:
 async def _get_access_password_state() -> tuple[str | None, str | None]:
     """Return (hash, plaintext) and migrate plaintext to hash when possible."""
     async with cfg_lock:
-        local_cfg = cfg
-        pwd_hash = getattr(local_cfg, "access_password_hash", None)
-        pwd_plain = (getattr(local_cfg, "access_password", None) or "").strip() or None
-        if pwd_plain and not pwd_hash:
-            try:
-                local_cfg.access_password_hash = _hash_password(pwd_plain)
-                local_cfg.access_password = ""
-                save_config(local_cfg)
-                pwd_hash = local_cfg.access_password_hash
-                pwd_plain = None
-                log("info", "Migrated access password to hash.")
-            except Exception as err:
-                log("warn", f"Could not migrate access password to hash: {err}")
-        return pwd_hash, pwd_plain
+        with cfg_thread_lock:
+            local_cfg = cfg
+            pwd_hash = getattr(local_cfg, "access_password_hash", None)
+            pwd_plain = (getattr(local_cfg, "access_password", None) or "").strip() or None
+            if pwd_plain and not pwd_hash:
+                try:
+                    local_cfg.access_password_hash = _hash_password(pwd_plain)
+                    local_cfg.access_password = ""
+                    save_config(local_cfg)
+                    pwd_hash = local_cfg.access_password_hash
+                    pwd_plain = None
+                    log("info", "Migrated access password to hash.")
+                except Exception as err:
+                    log("warn", f"Could not migrate access password to hash: {err}")
+            return pwd_hash, pwd_plain
 
 
 @app.middleware("http")
@@ -495,33 +505,34 @@ async def update_settings(
 ):
     """Persist settings and redirect back to /settings with a success flag."""
     async with cfg_lock:
-        cfg.cam_url = CAM_URL
-        cfg.instance_name = INSTANCE_NAME.strip() or None
-        enable_access_password = ACCESS_PASSWORD_ENABLE is not None
-        new_access_password = (ACCESS_PASSWORD or "").strip()
-        if not enable_access_password:
-            cfg.access_password_hash = None
-            cfg.access_password = ""
-        elif new_access_password:
-            cfg.access_password_hash = _hash_password(new_access_password)
-            cfg.access_password = ""
-        cfg.interval_seconds = INTERVAL_SECONDS
-        cfg.save_path = SAVE_PATH
-        cfg.auth_type = AUTH_TYPE
-        cfg.username = USERNAME
-        if PASSWORD.strip():
-            cfg.password = PASSWORD
-        cfg.active_start = ACTIVE_START
-        cfg.active_end = ACTIVE_END
-        cfg.active_days = [d for d in ACTIVE_DAYS if d]
-        cfg.schedule_start_date = (DATE_FROM or "").strip() or None
-        cfg.schedule_end_date = (DATE_TO or "").strip() or None
-        cfg.use_astral = USE_ASTRAL is not None
-        cfg.city_lat = CITY_LAT
-        cfg.city_lon = CITY_LON
-        cfg.city_tz = CITY_TZ
-        cfg.language = LANGUAGE or getattr(cfg, "language", "de")
-        save_config(cfg)
+        with cfg_thread_lock:
+            cfg.cam_url = CAM_URL
+            cfg.instance_name = INSTANCE_NAME.strip() or None
+            enable_access_password = ACCESS_PASSWORD_ENABLE is not None
+            new_access_password = (ACCESS_PASSWORD or "").strip()
+            if not enable_access_password:
+                cfg.access_password_hash = None
+                cfg.access_password = ""
+            elif new_access_password:
+                cfg.access_password_hash = _hash_password(new_access_password)
+                cfg.access_password = ""
+            cfg.interval_seconds = INTERVAL_SECONDS
+            cfg.save_path = SAVE_PATH
+            cfg.auth_type = AUTH_TYPE
+            cfg.username = USERNAME
+            if PASSWORD.strip():
+                cfg.password = PASSWORD
+            cfg.active_start = ACTIVE_START
+            cfg.active_end = ACTIVE_END
+            cfg.active_days = [d for d in ACTIVE_DAYS if d]
+            cfg.schedule_start_date = (DATE_FROM or "").strip() or None
+            cfg.schedule_end_date = (DATE_TO or "").strip() or None
+            cfg.use_astral = USE_ASTRAL is not None
+            cfg.city_lat = CITY_LAT
+            cfg.city_lon = CITY_LON
+            cfg.city_tz = CITY_TZ
+            cfg.language = LANGUAGE or getattr(cfg, "language", "de")
+            save_config(cfg)
 
     stop_scheduler()
     start_scheduler()
@@ -562,26 +573,9 @@ async def status():
     # Resolve save path from config and env overrides
     save_path = resolve_save_dir(getattr(local_cfg, "save_path", None))
 
-    count = 0
-    last_snapshot_ts = None
-    last_snapshot_full = None
-    last_snapshot_iso = None
-    latest_mtime = None
-    allowed_suffixes = ('.jpg', '.jpeg', '.png')
-    if save_path.exists():
-        for f in save_path.iterdir():
-            if f.is_file() and f.suffix.lower() in allowed_suffixes:
-                count += 1
-                mtime = f.stat().st_mtime
-                if latest_mtime is None or mtime > latest_mtime:
-                    latest_mtime = mtime
-        if latest_mtime:
-            latest_dt = datetime.fromtimestamp(latest_mtime)
-            last_snapshot_ts = latest_dt.strftime("%H:%M:%S")
-            last_snapshot_full = latest_dt.strftime("%d.%m.%y %H:%M")
-            last_snapshot_iso = latest_dt.isoformat(timespec="seconds")
-    else:
+    if not save_path.exists():
         log("warn", f"Save path does not exist: {save_path}")
+    count, last_snapshot_ts, last_snapshot_full, last_snapshot_iso = _compute_image_stats(save_path)
 
     if getattr(local_cfg, "use_astral", False):
         sunrise_time, sunset_time = get_sun_times(local_cfg)
@@ -1198,8 +1192,12 @@ async def action_snapshot():
 
 # === App lifecycle ===
 @app.on_event("startup")
-def startup_event():
+async def startup_event():
     log("info", "Starting CaptureLapse ...")
+    try:
+        set_main_loop(asyncio.get_running_loop())
+    except RuntimeError:
+        pass
     start_scheduler()
 
 

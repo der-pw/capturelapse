@@ -1,5 +1,6 @@
 import asyncio
 import shutil
+import threading
 from datetime import datetime, timedelta, time as dt_time
 import math
 from zoneinfo import ZoneInfo
@@ -9,7 +10,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 
 from app.downloader import take_snapshot, check_camera_health
 from app.logger_utils import log
-from app.broadcast_manager import broadcast
+from app.broadcast_manager import broadcast_threadsafe
 from app.sunrise_utils import is_within_time_range, get_sun_times
 from app.config_manager import load_config, save_config, resolve_save_dir
 from app.runtime_state import (
@@ -24,6 +25,7 @@ from app.runtime_state import (
 scheduler = None
 cfg = load_config()
 cfg_lock = asyncio.Lock()
+cfg_thread_lock = threading.RLock()
 is_paused = getattr(cfg, "paused", False)
 STATUS_HEARTBEAT_SECONDS = 10
 CAMERA_HEALTHCHECK_SECONDS = 60
@@ -125,6 +127,15 @@ def is_active_time(cfg, now_dt: datetime | None = None):
     """True if the current time is within the capture window."""
     active, _details = get_schedule_decision(cfg, now_dt=now_dt)
     return active
+
+
+def get_cfg_snapshot():
+    """Return a snapshot copy of the current config under a thread lock."""
+    with cfg_thread_lock:
+        try:
+            return cfg.model_copy()
+        except Exception:
+            return cfg
 
 
 def get_next_snapshot_iso(local_cfg) -> str | None:
@@ -306,7 +317,7 @@ def job_snapshot():
         log("info", "Scheduler paused - no snapshot.")
         return
 
-    local_cfg = cfg
+    local_cfg = get_cfg_snapshot()
 
     active, decision = get_schedule_decision(local_cfg)
     if not active:
@@ -339,23 +350,23 @@ def job_snapshot():
         except Exception as e:
             log("error", f"Failed to copy last.jpg: {e}")
 
-        asyncio.run(broadcast({
+        broadcast_threadsafe({
             "type": "snapshot",
             "filename": result["filename"],
             "timestamp": result["timestamp"],
             "timestamp_full": result.get("timestamp_full"),
             "timestamp_iso": result.get("timestamp_iso"),
-        }))
+        })
         try:
             next_snapshot_iso = get_next_snapshot_iso(local_cfg)
         except Exception:
             next_snapshot_iso = None
         try:
-            asyncio.run(broadcast({
+            broadcast_threadsafe({
                 "type": "next_snapshot",
                 "next_snapshot_iso": next_snapshot_iso,
-            }))
-        except RuntimeError as err:
+            })
+        except Exception as err:
             log("error", f"Failed to send next snapshot update: {err}")
         log("info", f"Snapshot saved: {result['filename']}")
         clear_camera_error()
@@ -371,12 +382,12 @@ def job_snapshot():
         log("error", "Snapshot failed")
         set_camera_error("snapshot_failed", "Snapshot failed")
         try:
-            asyncio.run(broadcast({
+            broadcast_threadsafe({
                 "type": "camera_error",
                 "code": "snapshot_failed",
                 "message": "Snapshot failed"
-            }))
-        except RuntimeError as err:
+            })
+        except Exception as err:
             log("error", f"Failed to send camera error: {err}")
 
 
@@ -387,36 +398,36 @@ def job_status_heartbeat():
     if is_paused:
         status = "paused"
     else:
-        status = "running" if is_active_time(cfg) else "waiting_window"
+        status = "running" if is_active_time(get_cfg_snapshot()) else "waiting_window"
 
     try:
-        asyncio.run(broadcast({
+        broadcast_threadsafe({
             "type": "status",
             "status": status
-        }))
-    except RuntimeError as err:
+        })
+    except Exception as err:
         log("error", f"Failed to send status heartbeat: {err}")
 
 
 def job_camera_healthcheck():
     """Periodically check camera reachability without taking a snapshot."""
-    local_cfg = cfg
+    local_cfg = get_cfg_snapshot()
     result = check_camera_health(local_cfg)
-    checked_at = _now(cfg).strftime("%Y-%m-%d %H:%M:%S")
+    checked_at = _now(local_cfg).strftime("%Y-%m-%d %H:%M:%S")
     if result["ok"]:
         clear_camera_error()
         set_camera_health("ok", result.get("code"), result.get("message", "OK"), checked_at)
     else:
         set_camera_health("error", result.get("code"), result.get("message", "Error"), checked_at)
     try:
-        asyncio.run(broadcast({
+        broadcast_threadsafe({
             "type": "camera_health",
             "status": "ok" if result["ok"] else "error",
             "code": result.get("code"),
             "message": result.get("message"),
             "checked_at": checked_at,
-        }))
-    except RuntimeError as err:
+        })
+    except Exception as err:
         log("error", f"Failed to send camera health update: {err}")
 
 
@@ -473,14 +484,15 @@ async def set_paused(value: bool, *, persist: bool = True) -> None:
     global cfg, is_paused
 
     async with cfg_lock:
-        is_paused = bool(value)
-        if hasattr(cfg, "paused"):
-            cfg.paused = is_paused
-        if persist:
-            try:
-                save_config(cfg)
-            except Exception as exc:  # pragma: no cover - logging is sufficient here
-                log("warn", f"Failed to persist pause state: {exc}")
+        with cfg_thread_lock:
+            is_paused = bool(value)
+            if hasattr(cfg, "paused"):
+                cfg.paused = is_paused
+            if persist:
+                try:
+                    save_config(cfg)
+                except Exception as exc:  # pragma: no cover - logging is sufficient here
+                    log("warn", f"Failed to persist pause state: {exc}")
 
     state = "paused" if is_paused else "resumed"
     log("info", f"Scheduler {state}")
