@@ -75,14 +75,21 @@ Tip: Setting `Start Time` and `End Time` to the same time (e.g. `00:00` to `00:0
 - `GET /events` - Server-Sent Events for live updates
 - `GET /gallery` - Image gallery (filterable thumbnails)
 - `GET /settings` - Settings page
-- `GET /status` - JSON status for UI
+- `GET /status` - JSON status for UI (includes timelapse status)
 - `POST /update` - Save settings (form submit)
 - `POST /action/{pause|resume|snapshot}` - Control actions
+  - Timelapse endpoints:
+    - `GET /timelapse/status` - Timelapse status (API compatibility)
+    - `GET /timelapse/list` - List rendered timelapse videos
+    - `POST /timelapse` - Create timelapse from selected range
+    - `GET /timelapse/download/{filename}` - Download a timelapse
+    - `DELETE /timelapse/delete/{filename}` - Delete a timelapse
 
 ### Frontend behavior
 - Dashboard uses **Server-Sent Events** for live status updates with automatic reconnection and falls back to periodic polling when needed.
 - Action buttons (`Pause`, `Resume`, `Snapshot`) call the API via `fetch` and surface inline success/error alerts without a page reload.
 - Settings are saved via AJAX (`fetch` on the settings form) so inline validation messages appear without navigating away from the page.
+- Timelapse/global status in the navbar uses `/status` as the single source of truth; `/timelapse/status` remains for API compatibility.
 - Shared helpers for fetch + alerts live in `app/static/js/app.js`, while page-specific logic is in `dashboard.js` and `settings.js`.
   - After saving, the settings page reloads after a short delay so language changes apply immediately.
 
@@ -175,7 +182,6 @@ Preparation notes:
 
 ## License
 This project uses the MIT License. See `LICENSE` for details.
-
 
 
 

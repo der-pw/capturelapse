@@ -44,11 +44,11 @@ Quick agent overview — keep this up to date when workflows change.
 ## Important Notes
 - Access protection optional via `access_password` in `config.json`.
 - Dashboard/settings run in the browser; status updates via Server-Sent Events.
+- UI timelapse status reads from `/status` (single source of truth); `/timelapse/status` remains for API compatibility.
 - Global status/alerts live in the navbar (`#global-status`); settings and timelapse messages are routed there.
 - Gallery range selection uses “Pick first / Pick last” buttons with auto-normalized (chronological) ranges.
 - “Select all” in Gallery selects the full filtered range across pagination.
 - This file can be automatically updated by the assistant when changes are confirmed to work.
-
 
 
 

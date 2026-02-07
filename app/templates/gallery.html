@@ -1042,9 +1042,10 @@
       let lastTimelapseState = null;
       const poll = async () => {
         try {
-          const res = await fetch('/timelapse/status');
+          const res = await fetch('/status');
           if (!res.ok) return;
-          const data = await res.json();
+          const statusData = await res.json();
+          const data = statusData && statusData.timelapse ? statusData.timelapse : {};
           if (lastTimelapseState === 'running' && data.state === 'done') {
             pendingListRefresh = true;
           }
@@ -1222,7 +1223,7 @@
       try {
         const [listRes, statusRes] = await Promise.all([
           fetch('/timelapse/list'),
-          fetch('/timelapse/status'),
+          fetch('/status'),
         ]);
         if (!listRes.ok) throw new Error(`list_failed_${listRes.status}`);
         const data = await listRes.json();
@@ -1230,8 +1231,9 @@
         let renderingName = null;
         if (statusRes.ok) {
           const statusData = await statusRes.json();
-          if (statusData && statusData.state === 'running' && statusData.output) {
-            renderingName = String(statusData.output);
+          const tl = statusData && statusData.timelapse ? statusData.timelapse : null;
+          if (tl && tl.state === 'running' && tl.output) {
+            renderingName = String(tl.output);
           }
         }
         const items = Array.isArray(data.items) ? data.items : [];

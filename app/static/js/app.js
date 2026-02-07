@@ -113,12 +113,13 @@
     const poll = async () => {
       let nextDelay = idlePollMs;
       try {
-        const res = await fetch('/timelapse/status');
+        const res = await fetch('/status');
         if (!res.ok) {
           setTimeout(poll, nextDelay);
           return;
         }
-        const data = await res.json();
+        const statusData = await res.json();
+        const data = statusData && statusData.timelapse ? statusData.timelapse : {};
         if (data.state === 'running') {
           const percentRaw = Number(data.progress);
           const percent = Number.isFinite(percentRaw) ? Math.max(0, Math.min(100, percentRaw)) : null;

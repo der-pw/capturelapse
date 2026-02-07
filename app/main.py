@@ -155,6 +155,23 @@ def _find_timelapse_file(base_dirs: list[Path], filename: str) -> Optional[Path]
     return None
 
 
+def _build_timelapse_status(local_cfg) -> dict:
+    save_dir = resolve_save_dir(getattr(local_cfg, "save_path", None))
+    has_output = False
+    output_name = None
+    candidates = _list_timelapse_files([save_dir, PICTURES_DIR] if PICTURES_DIR != save_dir else [save_dir])
+    if candidates:
+        has_output = True
+        latest = max(candidates, key=lambda p: p.stat().st_mtime)
+        output_name = latest.name
+    with _timelapse_lock:
+        payload = dict(_timelapse_status)
+    if output_name:
+        payload["output"] = output_name
+    payload["has_output"] = has_output
+    return payload
+
+
 def _normalize_password(pwd: str) -> bytes:
     """Normalize password for bcrypt's 72-byte limit."""
     raw = (pwd or "").encode("utf-8")
@@ -603,6 +620,7 @@ async def status():
         "next_snapshot_iso": next_snapshot_iso,
         "camera_error": get_camera_error(),
         "camera_health": get_camera_health(),
+        "timelapse": _build_timelapse_status(local_cfg),
     }
 
 
@@ -1025,20 +1043,7 @@ async def create_timelapse(payload: dict = Body(...)):
 async def timelapse_status():
     async with cfg_lock:
         local_cfg = cfg
-    save_dir = resolve_save_dir(getattr(local_cfg, "save_path", None))
-    has_output = False
-    output_name = None
-    candidates = _list_timelapse_files([save_dir, PICTURES_DIR] if PICTURES_DIR != save_dir else [save_dir])
-    if candidates:
-        has_output = True
-        latest = max(candidates, key=lambda p: p.stat().st_mtime)
-        output_name = latest.name
-    with _timelapse_lock:
-        payload = dict(_timelapse_status)
-    if output_name:
-        payload["output"] = output_name
-    payload["has_output"] = has_output
-    return payload
+    return _build_timelapse_status(local_cfg)
 
 
 @app.delete("/timelapse/delete/{filename}")
