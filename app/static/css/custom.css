@@ -315,6 +315,7 @@ body.modal-open .navbar {
   font-size: 1.5rem;
   padding: 0;
   display: flex;
+  z-index: 2;
   justify-content: center;
   align-items: center;
   cursor: pointer;
@@ -340,6 +341,7 @@ body.modal-open .navbar {
   font-size: 1.1rem;
   padding: 0;
   display: flex;
+  z-index: 2;
   justify-content: center;
   align-items: center;
   cursor: pointer;
