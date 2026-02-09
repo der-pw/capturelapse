@@ -302,6 +302,10 @@
             <tbody id="timelapse-list-body"></tbody>
           </table>
         </div>
+        <div id="timelapse-inline-preview-wrap" class="mt-3 d-none">
+          <div id="timelapse-inline-preview-title" class="small text-muted mb-2"></div>
+          <video id="timelapse-preview-video" class="w-100 rounded" controls preload="metadata"></video>
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-outline-secondary" id="timelapse-list-refresh">
@@ -1170,6 +1174,9 @@
     const listTable = document.getElementById('timelapse-list-table');
     const listEmpty = document.getElementById('timelapse-list-empty');
     const listRefresh = document.getElementById('timelapse-list-refresh');
+    const previewWrapEl = document.getElementById('timelapse-inline-preview-wrap');
+    const previewTitleEl = document.getElementById('timelapse-inline-preview-title');
+    const previewVideoEl = document.getElementById('timelapse-preview-video');
     let listRefreshAfterDone = false;
     let pendingListRefresh = false;
     const listLabels = {
@@ -1181,6 +1188,18 @@
       renderingHint: '{{ tr.get("gallery_timelapse_list_rendering_hint", "Still rendering") if tr else "Still rendering" }}',
       unknown: '{{ tr.get("gallery_timelapse_list_unknown", "Unknown") if tr else "Unknown" }}',
     };
+
+    function openTimelapsePreview(name) {
+      if (!name || !previewVideoEl) return;
+      previewVideoEl.src = `/timelapse/view/${encodeURIComponent(name)}`;
+      previewVideoEl.load();
+      if (previewTitleEl) {
+        previewTitleEl.textContent = name;
+      }
+      if (previewWrapEl) {
+        previewWrapEl.classList.remove('d-none');
+      }
+    }
 
     function formatBytes(bytes) {
       const value = Number(bytes);
@@ -1247,7 +1266,12 @@
           const tr = document.createElement('tr');
           const nameTd = document.createElement('td');
           const name = item.name || listLabels.unknown;
-          nameTd.textContent = name;
+          const previewBtn = document.createElement('button');
+          previewBtn.type = 'button';
+          previewBtn.className = 'btn btn-link p-0 text-start text-decoration-none';
+          previewBtn.textContent = name;
+          previewBtn.addEventListener('click', () => openTimelapsePreview(name));
+          nameTd.appendChild(previewBtn);
           if (renderingName && name === renderingName) {
             const badge = document.createElement('span');
             badge.className = 'badge text-bg-warning ms-2';
@@ -1323,6 +1347,22 @@
       listModalEl.addEventListener('shown.bs.modal', () => {
         if (listBody && !listBody.children.length) {
           loadTimelapseList();
+        }
+      });
+      listModalEl.addEventListener('hidden.bs.modal', () => {
+        if (previewVideoEl) {
+          try {
+            previewVideoEl.pause();
+            previewVideoEl.currentTime = 0;
+          } catch (_) { }
+          previewVideoEl.removeAttribute('src');
+          previewVideoEl.load();
+        }
+        if (previewWrapEl) {
+          previewWrapEl.classList.add('d-none');
+        }
+        if (previewTitleEl) {
+          previewTitleEl.textContent = '';
         }
       });
     }

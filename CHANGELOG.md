@@ -2,6 +2,12 @@
 
 All notable user-visible changes are documented here.
 
+## 0.9.19-beta - 2026-02-09
+- Gallery timelapse list: video names are now clickable and open an inline preview player directly inside the same modal.
+- Gallery timelapse list: removed the extra preview modal to avoid stacked modal transitions.
+- Gallery modal behavior: fixed horizontal background layout shift while opening/closing timelapse preview flow.
+- Gallery timelapse modal: preview state is now reset on close (stop playback, clear source, hide preview block).
+
 ## 0.9.18-beta - 2026-02-09
 - Dashboard controls: replaced separate Pause/Resume buttons with a single toggle button (dynamic icon and label).
 - Dashboard controls: added fixed button width for both toggle and snapshot actions for consistent layout.

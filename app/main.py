@@ -58,7 +58,7 @@ app.mount(
 )
 
 # === Templates ===
-APP_VERSION = "0.9.18-beta"
+APP_VERSION = "0.9.19-beta"
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 templates.env.globals["app_version"] = APP_VERSION
 IMAGE_STATS_TTL_SECONDS = 60
@@ -1149,6 +1149,19 @@ async def download_timelapse(filename: str):
         raise HTTPException(status_code=404)
     media_type = "video/mp4" if filename.lower().endswith(".mp4") else "video/x-msvideo"
     return FileResponse(file_path, media_type=media_type, filename=filename)
+
+
+@app.get("/timelapse/view/{filename}")
+async def view_timelapse(filename: str):
+    async with cfg_lock:
+        local_cfg = cfg
+    save_dir = resolve_save_dir(getattr(local_cfg, "save_path", None))
+    base_dirs = _timelapse_search_dirs(save_dir)
+    file_path = _find_timelapse_file(base_dirs, filename)
+    if not file_path:
+        raise HTTPException(status_code=404)
+    media_type = "video/mp4" if filename.lower().endswith(".mp4") else "video/x-msvideo"
+    return FileResponse(file_path, media_type=media_type)
 
 
 @app.get("/timelapse/list")

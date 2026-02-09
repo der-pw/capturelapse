@@ -165,7 +165,9 @@
   window.CaptureLapse = CaptureLapse;
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', CaptureLapse.startTimelapseStatus);
+    document.addEventListener('DOMContentLoaded', () => {
+      CaptureLapse.startTimelapseStatus();
+    });
   } else {
     CaptureLapse.startTimelapseStatus();
   }

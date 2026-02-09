@@ -4,21 +4,6 @@
   padding: 0.8rem;
 }
 
-/* Keep layout width stable across pages by always reserving scrollbar space */
-html {
-  overflow-y: scroll;
-}
-
-/* Prevent layout shift when Bootstrap modal toggles body padding */
-body.modal-open {
-  padding-right: 0 !important;
-  overflow-y: scroll;
-}
-
-body.modal-open .navbar {
-  padding-right: 0 !important;
-}
-
 /* Global timelapse status in navbar */
 .navbar-status {
   display: flex;
