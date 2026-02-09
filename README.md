@@ -177,7 +177,10 @@ Notes:
 Preparation notes:
 - The container runs as `1000:1000` in the example. Ensure the host `data/` folder is writable by that UID:GID.
 - If you want to run as a different user, change `user:` and align ownership with `chown`.
-- `data/config.json` will be created on first start; `pictures/` is where snapshots are stored.
+- `data/config.json` will be created on first start; `pictures/` stores image and media data:
+  - snapshots: `pictures/`
+  - generated gallery thumbnails: `pictures/.thumbs/`
+  - rendered timelapse videos: `pictures/timelapse/`
 
 
 ## License

@@ -18,6 +18,10 @@ Quick agent overview — keep this up to date when workflows change.
 - `app/static/js/`: frontend scripts (app.js, dashboard.js, settings.js)
 - `app/templates/`: Jinja2 templates
 - `app/data/config.json`: runtime configuration (local)
+- media storage under pictures root (`save_path`):
+  - snapshots: `<save_path>/`
+  - generated gallery thumbnails: `<save_path>/.thumbs/`
+  - rendered timelapses: `<save_path>/timelapse/`
 
 ## Local Setup
 - Prereqs: Python 3.10+
@@ -48,6 +52,8 @@ Quick agent overview — keep this up to date when workflows change.
 - Global status/alerts live in the navbar (`#global-status`); settings and timelapse messages are routed there.
 - Gallery range selection uses “Pick first / Pick last” buttons with auto-normalized (chronological) ranges.
 - “Select all” in Gallery selects the full filtered range across pagination.
+- Gallery thumbnail images are served via `/thumbs/{filename}` with browser cache headers; thumbs are generated immediately on snapshot save and on-demand for existing files.
+- Timelapse outputs are stored only in `<save_path>/timelapse/` (no legacy root fallback).
 - This file can be automatically updated by the assistant when changes are confirmed to work.
 
 
