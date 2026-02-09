@@ -170,6 +170,28 @@
 .gallery-clear-actions .btn {
   width: 100%;
 }
+.gallery-clear-actions .gallery-state-btn {
+  transition: opacity 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.gallery-clear-actions .gallery-state-btn:disabled,
+.gallery-clear-actions .gallery-state-btn.disabled {
+  opacity: 0.45;
+  filter: grayscale(0.55) saturate(0.8);
+  border-style: dashed;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.gallery-clear-actions .gallery-state-btn:not(:disabled) {
+  opacity: 1;
+  filter: none;
+}
+#gallery-open-timelapse:not(:disabled) {
+  border-color: rgba(25, 135, 84, 0.9);
+  box-shadow: 0 0 0 0.1rem rgba(25, 135, 84, 0.2);
+}
+#gallery-delete-selected:not(:disabled) {
+  box-shadow: 0 0 0 0.1rem rgba(220, 53, 69, 0.2);
+}
 
 .gallery-toolbar {
   position: sticky;
@@ -187,16 +209,14 @@
 }
 
 .date-input-icon {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%236c757d' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h.5A1.5 1.5 0 0 1 15 2.5v11A1.5 1.5 0 0 1 13.5 15h-11A1.5 1.5 0 0 1 1 13.5v-11A1.5 1.5 0 0 1 2.5 1H3V.5a.5.5 0 0 1 .5-.5zM2 5v8.5a.5.5 0 0 0 .5.5h11a.5.5 0 0 0 .5-.5V5H2z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.75rem center;
-  background-size: 1rem 1rem;
-  padding-right: 2.25rem;
+  background-image: none;
+  padding-right: 0.75rem;
 }
 
-/* Hide native calendar icon in Chromium so only the custom icon is visible */
+/* Keep native datepicker indicator clickable/visible */
 .date-input-icon::-webkit-calendar-picker-indicator {
-  opacity: 0;
+  opacity: 1;
+  cursor: pointer;
 }
 
 @media (max-width: 576px) {

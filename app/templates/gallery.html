@@ -60,17 +60,17 @@
         data-all-end-ts="{{ range_all.end_ts if range_all else '' }}"></div>
     </div>
     <div class="gallery-clear-actions d-flex flex-wrap gap-2 align-items-stretch">
-      <button id="gallery-select-all" class="btn btn-sm btn-outline-secondary" type="button" {% if not range_all
+      <button id="gallery-select-all" class="btn btn-sm btn-outline-secondary gallery-state-btn" type="button" {% if not range_all
         %}disabled{% endif %}>
         {{ tr.get('gallery_select_all', 'Select all') if tr else 'Select all' }}
       </button>
-      <button id="gallery-clear-selection" class="btn btn-sm btn-outline-secondary" type="button" disabled>
+      <button id="gallery-clear-selection" class="btn btn-sm btn-outline-secondary gallery-state-btn" type="button" disabled>
         {{ tr.get('gallery_clear_selection', 'Clear selection') if tr else 'Clear selection' }}
       </button>
-      <button id="gallery-delete-selected" class="btn btn-sm btn-outline-danger" type="button" disabled>
+      <button id="gallery-delete-selected" class="btn btn-sm btn-outline-danger gallery-state-btn" type="button" disabled>
         {{ tr.get('gallery_delete_selected', 'Delete selected') if tr else 'Delete selected' }}
       </button>
-      <button id="gallery-open-timelapse" class="btn btn-sm btn-outline-secondary w-100" type="button"
+      <button id="gallery-open-timelapse" class="btn btn-sm btn-outline-secondary w-100 gallery-state-btn" type="button"
         data-bs-toggle="modal" data-bs-target="#timelapseModal" disabled>
         {{ tr.get('gallery_create_timelapse', 'Create timelapse') if tr else 'Create timelapse' }}
       </button>

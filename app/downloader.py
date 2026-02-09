@@ -3,6 +3,7 @@ from requests.auth import HTTPBasicAuth, HTTPDigestAuth
 from datetime import datetime
 from pathlib import Path
 import shutil
+import time
 from app.logger_utils import log
 from app.config_manager import resolve_save_dir
 from app.thumbnails import ensure_thumbnail
@@ -82,30 +83,49 @@ def check_camera_health(cfg):
         return {"ok": False, "code": "no_url", "message": "No camera URL configured"}
 
     auth = _build_auth(cfg)
+    timeout_seconds = 5
+    retries = 3
+    retry_delay_seconds = 0.35
 
     try:
         # Prefer HEAD to avoid downloading the full snapshot; fall back to GET if needed.
         try:
-            resp = requests.head(cfg.cam_url, auth=auth, timeout=5, allow_redirects=True)
+            resp = requests.head(
+                cfg.cam_url,
+                auth=auth,
+                timeout=timeout_seconds,
+                allow_redirects=True,
+            )
             status = resp.status_code
         except Exception:
             status = 599
-            resp = None
 
         if status >= 400:
             # Some cameras reject HEAD (or auth on HEAD) but allow GET.
             # Avoid Range headers because some cameras drop the connection on ranged requests.
-            resp = requests.get(
-                cfg.cam_url,
-                auth=auth,
-                timeout=5,
-                stream=True,
-                allow_redirects=True,
-            )
-            status = resp.status_code
-            # Read a single chunk to confirm reachability
-            next(resp.iter_content(chunk_size=1024), None)
-            resp.close()
+            last_error = None
+            for attempt in range(retries):
+                try:
+                    resp = requests.get(
+                        cfg.cam_url,
+                        auth=auth,
+                        timeout=timeout_seconds,
+                        stream=True,
+                        allow_redirects=True,
+                    )
+                    status = resp.status_code
+                    if status < 400:
+                        # Read a single chunk to confirm reachability.
+                        next(resp.iter_content(chunk_size=1024), None)
+                        resp.close()
+                        return {"ok": True, "code": str(status), "message": "Camera reachable"}
+                    resp.close()
+                except Exception as err:
+                    last_error = err
+                if attempt < retries - 1:
+                    time.sleep(retry_delay_seconds)
+            if last_error is not None:
+                return {"ok": False, "code": "exception", "message": str(last_error)}
         if status < 400:
             return {"ok": True, "code": str(status), "message": "Camera reachable"}
         return {"ok": False, "code": str(status), "message": f"HTTP {status}"}
