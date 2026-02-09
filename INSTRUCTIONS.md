@@ -50,6 +50,7 @@ Quick agent overview — keep this up to date when workflows change.
   - bump `APP_VERSION` in `app/main.py`
   - read version strictly from `app/main.py` (`APP_VERSION`) as single source of truth
   - add one changelog section for that exact version
+  - keep older version sections unchanged; do not move old changes into newer version headers
   - use the same version tag in the commit message/body
 - Version heading format in changelog:
   - `## <APP_VERSION> - YYYY-MM-DD`
