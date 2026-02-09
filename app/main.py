@@ -17,7 +17,7 @@ import subprocess
 import threading
 import re
 
-from app.config_manager import load_config, save_config, resolve_save_dir, PICTURES_DIR
+from app.config_manager import load_config, save_config, resolve_save_dir
 from app.models import ConfigModel
 from app.scheduler import (
     start_scheduler,
@@ -105,6 +105,7 @@ def _safe_instance_slug(name: Optional[str]) -> str:
 
 
 _TIMELAPSE_NAME_RE = re.compile(r"^.+_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}(?:-\d+)?\.mp4$", re.IGNORECASE)
+TIMELAPSE_SUBDIR_NAME = "timelapse"
 
 
 def _is_timelapse_filename(name: str) -> bool:
@@ -114,6 +115,14 @@ def _is_timelapse_filename(name: str) -> bool:
     if lower.startswith("timelapse_"):
         return True
     return bool(_TIMELAPSE_NAME_RE.match(name))
+
+
+def _timelapse_dir(base_dir: Path) -> Path:
+    return base_dir / TIMELAPSE_SUBDIR_NAME
+
+
+def _timelapse_search_dirs(save_dir: Path) -> list[Path]:
+    return [_timelapse_dir(save_dir)]
 
 
 def _list_timelapse_files(base_dirs: list[Path]) -> list[Path]:
@@ -160,7 +169,7 @@ def _build_timelapse_status(local_cfg) -> dict:
     save_dir = resolve_save_dir(getattr(local_cfg, "save_path", None))
     has_output = False
     output_name = None
-    candidates = _list_timelapse_files([save_dir, PICTURES_DIR] if PICTURES_DIR != save_dir else [save_dir])
+    candidates = _list_timelapse_files(_timelapse_search_dirs(save_dir))
     if candidates:
         has_output = True
         latest = max(candidates, key=lambda p: p.stat().st_mtime)
@@ -640,6 +649,8 @@ async def gallery_page(
 
     tz = _get_cfg_tz(local_cfg)
     save_dir = resolve_save_dir(getattr(local_cfg, "save_path", None))
+    timelapse_dir = _timelapse_dir(save_dir)
+    timelapse_dir.mkdir(parents=True, exist_ok=True)
     allowed_suffixes = (".jpg", ".jpeg", ".png")
 
     parsed_from = None
@@ -945,11 +956,11 @@ async def create_timelapse(payload: dict = Body(...)):
     instance_slug = _safe_instance_slug(getattr(local_cfg, "instance_name", None))
     base_name = f"{instance_slug}_{timestamp}"
     output_name = f"{base_name}.mp4"
-    output_path = save_dir / output_name
+    output_path = timelapse_dir / output_name
     if output_path.exists():
         counter = 2
         while True:
-            candidate = save_dir / f"{base_name}-{counter}.mp4"
+            candidate = timelapse_dir / f"{base_name}-{counter}.mp4"
             if not candidate.exists():
                 output_path = candidate
                 break
@@ -1068,7 +1079,7 @@ async def delete_timelapse(filename: str):
         local_cfg = cfg
     save_dir = resolve_save_dir(getattr(local_cfg, "save_path", None))
     deleted_any = False
-    base_dirs = [save_dir, PICTURES_DIR] if PICTURES_DIR != save_dir else [save_dir]
+    base_dirs = _timelapse_search_dirs(save_dir)
 
     def _try_delete_in_dir(base_dir: Path) -> bool:
         try:
@@ -1087,10 +1098,10 @@ async def delete_timelapse(filename: str):
     if not _is_timelapse_filename(filename):
         raise HTTPException(status_code=404)
 
-    if _try_delete_in_dir(save_dir):
-        deleted_any = True
-    elif PICTURES_DIR != save_dir and _try_delete_in_dir(PICTURES_DIR):
-        deleted_any = True
+    for base_dir in base_dirs:
+        if _try_delete_in_dir(base_dir):
+            deleted_any = True
+            break
 
     if not deleted_any:
         try:
@@ -1132,7 +1143,7 @@ async def download_timelapse(filename: str):
     async with cfg_lock:
         local_cfg = cfg
     save_dir = resolve_save_dir(getattr(local_cfg, "save_path", None))
-    base_dirs = [save_dir, PICTURES_DIR] if PICTURES_DIR != save_dir else [save_dir]
+    base_dirs = _timelapse_search_dirs(save_dir)
     file_path = _find_timelapse_file(base_dirs, filename)
     if not file_path:
         raise HTTPException(status_code=404)
@@ -1146,7 +1157,7 @@ async def timelapse_list():
         local_cfg = cfg
     tz = _get_cfg_tz(local_cfg)
     save_dir = resolve_save_dir(getattr(local_cfg, "save_path", None))
-    base_dirs = [save_dir, PICTURES_DIR] if PICTURES_DIR != save_dir else [save_dir]
+    base_dirs = _timelapse_search_dirs(save_dir)
     candidates = _list_timelapse_files(base_dirs)
     items = []
     for f in sorted(candidates, key=lambda p: p.stat().st_mtime, reverse=True):
