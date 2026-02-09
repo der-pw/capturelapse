@@ -43,6 +43,8 @@ Quick agent overview — keep this up to date when workflows change.
 
 ## Changelog + Commit Convention 
 ### Bitte inkl. Changelog/Versioning sauber mitziehen.
+- If this trigger sentence is used, write changelog entries in English only.
+- If this trigger sentence is used, always provide a ready-to-use commit note in English.
 - Keep a top-level `CHANGELOG.md` with newest version first.
 - For every user-visible change:
   - bump `APP_VERSION` in `app/main.py`
