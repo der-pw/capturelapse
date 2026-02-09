@@ -86,10 +86,10 @@
 
   function showValidationMessage(message, input, showMessage) {
     if (!message) return;
+    if (!showMessage) return;
     if (input && typeof input.reportValidity === 'function') {
       input.reportValidity();
     }
-    if (!showMessage) return;
     if (showAlert) {
       showAlert(statusBox, {
         message,
