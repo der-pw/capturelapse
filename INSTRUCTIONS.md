@@ -41,6 +41,20 @@ Quick agent overview — keep this up to date when workflows change.
 - Formatter/Linter: not documented
 - Naming conventions: not documented
 
+## Changelog + Commit Convention 
+### Bitte inkl. Changelog/Versioning sauber mitziehen.
+- Keep a top-level `CHANGELOG.md` with newest version first.
+- For every user-visible change:
+  - bump `APP_VERSION` in `app/main.py`
+  - add one changelog section for that exact version
+  - use the same version tag in the commit message/body
+- Version heading format in changelog:
+  - `## <APP_VERSION> - YYYY-MM-DD`
+- Commit message convention:
+  - subject: short summary
+  - body first line: `APP_VERSION: <APP_VERSION>`
+  - body bullets: same key points as in changelog entry
+
 ## Deployment
 - Environments: Docker Compose possible
 - Deploy steps: `docker compose up -d` (see README)
