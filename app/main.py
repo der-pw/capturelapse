@@ -58,7 +58,7 @@ app.mount(
 )
 
 # === Templates ===
-APP_VERSION = "0.9.15-beta"
+APP_VERSION = "0.9.16-beta"
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 templates.env.globals["app_version"] = APP_VERSION
 IMAGE_STATS_TTL_SECONDS = 60
@@ -649,8 +649,6 @@ async def gallery_page(
 
     tz = _get_cfg_tz(local_cfg)
     save_dir = resolve_save_dir(getattr(local_cfg, "save_path", None))
-    timelapse_dir = _timelapse_dir(save_dir)
-    timelapse_dir.mkdir(parents=True, exist_ok=True)
     allowed_suffixes = (".jpg", ".jpeg", ".png")
 
     parsed_from = None
@@ -907,6 +905,8 @@ async def create_timelapse(payload: dict = Body(...)):
     async with cfg_lock:
         local_cfg = cfg
     save_dir = resolve_save_dir(getattr(local_cfg, "save_path", None))
+    timelapse_dir = _timelapse_dir(save_dir)
+    timelapse_dir.mkdir(parents=True, exist_ok=True)
     allowed_suffixes = (".jpg", ".jpeg", ".png")
 
     def _resolve_file(name: str) -> Path:
