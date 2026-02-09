@@ -110,18 +110,20 @@
 </div>
 <div id="gallery-lightbox" class="gallery-lightbox" aria-hidden="true">
   <div class="gallery-lightbox-backdrop"></div>
-  <button class="gallery-lightbox-nav gallery-lightbox-prev" type="button" aria-label="Previous image">
+  <button class="btn btn-secondary btn-square d-inline-flex align-items-center justify-content-center position-absolute top-50 start-0 translate-middle-y ms-3 z-2 gallery-lightbox-prev" type="button" aria-label="Previous image">
     <i class="fa-solid fa-arrow-left"></i>
   </button>
-  <button class="gallery-lightbox-nav gallery-lightbox-next" type="button" aria-label="Next image">
+  <button class="btn btn-secondary btn-square d-inline-flex align-items-center justify-content-center position-absolute top-50 end-0 translate-middle-y me-3 z-2 gallery-lightbox-next" type="button" aria-label="Next image">
     <i class="fa-solid fa-arrow-right"></i>
   </button>
-  <button class="gallery-lightbox-close" type="button" aria-label="Close">
-    <i class="fa-solid fa-xmark"></i>
-  </button>
-  <button class="gallery-lightbox-delete" type="button" aria-label="Delete image">
-    <i class="fa-solid fa-trash"></i>
-  </button>
+  <div class="position-absolute top-0 end-0 m-3 z-2 d-flex flex-column gap-2">
+    <button class="btn btn-secondary btn-square d-inline-flex align-items-center justify-content-center gallery-lightbox-close" type="button" aria-label="Close">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+    <button class="btn btn-danger btn-square d-inline-flex align-items-center justify-content-center gallery-lightbox-delete" type="button" aria-label="Delete image">
+      <i class="fa-solid fa-trash"></i>
+    </button>
+  </div>
   <img id="gallery-lightbox-img" alt="">
   <div id="gallery-lightbox-caption" class="gallery-lightbox-caption"></div>
 </div>
@@ -332,8 +334,8 @@
       lightboxImg.alt = '';
       if (lightboxCaption) lightboxCaption.textContent = '';
       lightboxIndex = null;
-      if (lightboxPrev) lightboxPrev.classList.add('is-hidden');
-      if (lightboxNext) lightboxNext.classList.add('is-hidden');
+      if (lightboxPrev) lightboxPrev.classList.add('d-none');
+      if (lightboxNext) lightboxNext.classList.add('d-none');
     }
 
     function getGalleryCards() {
@@ -363,11 +365,11 @@
       const hasNext = !!getAdjacentCard(current, 1);
       if (lightboxPrev) {
         lightboxPrev.disabled = !hasPrev;
-        lightboxPrev.classList.toggle('is-hidden', !hasPrev);
+        lightboxPrev.classList.toggle('d-none', !hasPrev);
       }
       if (lightboxNext) {
         lightboxNext.disabled = !hasNext;
-        lightboxNext.classList.toggle('is-hidden', !hasNext);
+        lightboxNext.classList.toggle('d-none', !hasNext);
       }
     }
 
