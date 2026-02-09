@@ -16,6 +16,8 @@
      data-status-reconnecting="{{ tr.get('status_reconnecting', 'Reconnecting to live updates ...') | e if tr else 'Reconnecting to live updates ...' }}"
      data-status-failed="{{ tr.get('status_failed', 'Status konnte nicht geladen werden') | e if tr else 'Status konnte nicht geladen werden' }}"
      data-action-error="{{ tr.get('action_error', 'Action failed') | e if tr else 'Action failed' }}"
+     data-label-pause="{{ tr['pause'] if tr else 'Pause' }}"
+     data-label-resume="{{ tr['resume'] if tr else 'Resume' }}"
      data-locale="{{ lang or 'de' }}"
      data-interval-seconds="{{ cfg.interval_seconds }}"
      data-schedule-start="{{ cfg.schedule_start_date or '' }}"
@@ -53,9 +55,14 @@
 
   <!-- Controls -->
   <div class="d-flex justify-content-center mb-3 gap-3">
-    <button id="btn-pause" class="btn btn-warning">{{ tr["pause"] if tr else "Pause" }}</button>
-    <button id="btn-resume" class="btn btn-success">{{ tr["resume"] if tr else "Resume" }}</button>
-    <button id="btn-snapshot" class="btn btn-primary">{{ tr["snapshot"] if tr else "Snapshot" }}</button>
+    <button id="btn-toggle-pause" class="btn btn-warning dashboard-action-btn">
+      <i class="fa-solid fa-pause me-2"></i>
+      <span>{{ tr["pause"] if tr else "Pause" }}</span>
+    </button>
+    <button id="btn-snapshot" class="btn btn-primary dashboard-action-btn">
+      <i class="fa-solid fa-camera me-2"></i>
+      <span>{{ tr["snapshot"] if tr else "Snapshot" }}</span>
+    </button>
   </div>
 
   <!-- Info: 3 columns (Time/Images | Start/End | Sunrise/Sunset) -->

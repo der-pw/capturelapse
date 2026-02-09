@@ -2,7 +2,7 @@
 
 All notable user-visible changes are documented here.
 
-## 0.9.16-beta - 2026-02-09
+## 0.9.18-beta - 2026-02-09
 - Gallery: switched to generated thumbnails via `/thumbs/{filename}` for faster loading.
 - Snapshots now generate thumbnails immediately into `pictures/.thumbs/`.
 - Thumbnails use browser cache headers for smoother scrolling/reload performance.
@@ -11,6 +11,9 @@ All notable user-visible changes are documented here.
 - Timelapse start flow fixed after storage refactor (correct timelapse dir initialization in create route).
 - Settings: fixed focus jump while typing (live validation no longer steals focus).
 - Gallery lightbox controls were cleaned up to Bootstrap-based layout utilities.
+- Dashboard controls: replaced separate Pause/Resume buttons with a single toggle button (dynamic icon and label).
+- Dashboard controls: added fixed button width for both toggle and snapshot actions for consistent layout.
+- i18n (de): changed action label from `Pause` to `Pausieren`.
 - Config fallback defaults (`ConfigModel`) were aligned with `config.default.json` to keep fresh-start behavior consistent.
 - Docs updated (`README.md`, `INSTRUCTIONS.md`) for new media folder structure and conventions.
 

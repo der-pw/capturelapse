@@ -48,6 +48,7 @@ Quick agent overview — keep this up to date when workflows change.
 - Keep a top-level `CHANGELOG.md` with newest version first.
 - For every user-visible change:
   - bump `APP_VERSION` in `app/main.py`
+  - read version strictly from `app/main.py` (`APP_VERSION`) as single source of truth
   - add one changelog section for that exact version
   - use the same version tag in the commit message/body
 - Version heading format in changelog:

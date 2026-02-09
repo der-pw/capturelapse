@@ -250,6 +250,9 @@ body.modal-open .navbar {
   height: 2.4rem;
   padding: 0;
 }
+.dashboard-action-btn {
+  min-width: 10.5rem;
+}
 .gallery-lightbox img {
   position: relative;
   max-width: 92vw;

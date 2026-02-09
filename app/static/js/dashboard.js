@@ -39,6 +39,8 @@
     statusReconnecting: root.dataset.statusReconnecting || 'Reconnecting to live updates …',
     statusFailed: root.dataset.statusFailed || 'Status could not be loaded',
     actionError: root.dataset.actionError || 'Action failed',
+    pauseLabel: root.dataset.labelPause || 'Pause',
+    resumeLabel: root.dataset.labelResume || 'Resume',
   };
 
   const intervalSeconds = parseInt(root.dataset.intervalSeconds || '', 10);
@@ -88,6 +90,23 @@
   const POLL_INTERVAL_MS = 60000;
   let cameraErrorActive = false;
   let cameraErrorSource = null; // 'snapshot' | 'health'
+  let isPaused = false;
+
+  function updatePauseToggleButton() {
+    const btn = qs('btn-toggle-pause');
+    if (!btn) return;
+    const icon = btn.querySelector('i');
+    const label = btn.querySelector('span');
+    btn.classList.toggle('btn-warning', !isPaused);
+    btn.classList.toggle('btn-success', isPaused);
+    if (icon) {
+      icon.classList.toggle('fa-pause', !isPaused);
+      icon.classList.toggle('fa-play', isPaused);
+    }
+    if (label) {
+      label.textContent = isPaused ? messages.resumeLabel : messages.pauseLabel;
+    }
+  }
 
   const bust = (u) => `${u}${u.includes('?') ? '&' : '?'}t=${Date.now()}`;
   const fallbackImage = '/static/img/capturelapse.jpg';
@@ -246,10 +265,14 @@
         cameraErrorSource = 'health';
         setStatus(cameraHealthMsg, null, true);
       } else if (data.paused === true) {
+        isPaused = true;
+        updatePauseToggleButton();
         cameraErrorActive = false;
         cameraErrorSource = null;
         setStatus(messages.statusPaused);
       } else if (data.active === true) {
+        isPaused = false;
+        updatePauseToggleButton();
         cameraErrorActive = false;
         cameraErrorSource = null;
         if (Number.isFinite(intervalSeconds) && intervalSeconds > 0) {
@@ -258,6 +281,8 @@
           setStatus(messages.statusRunning);
         }
       } else {
+        isPaused = false;
+        updatePauseToggleButton();
         cameraErrorActive = false;
         cameraErrorSource = null;
         setStatus(messages.statusWaiting);
@@ -283,8 +308,12 @@
     if (!status || cameraErrorActive) return;
     let revert = false;
     if (status === 'paused') {
+      isPaused = true;
+      updatePauseToggleButton();
       setStatus(messages.statusPaused);
     } else if (status === 'running') {
+      isPaused = false;
+      updatePauseToggleButton();
       if (Number.isFinite(intervalSeconds) && intervalSeconds > 0) {
         setStatus(messages.statusRunningInterval.replace('{seconds}', intervalSeconds));
       } else {
@@ -374,13 +403,17 @@
   }
 
   async function sendAction(path) {
-    const btn = path === 'pause' ? qs('btn-pause') : path === 'resume' ? qs('btn-resume') : qs('btn-snapshot');
+    const btn = path === 'pause' || path === 'resume' ? qs('btn-toggle-pause') : qs('btn-snapshot');
     if (btn) btn.disabled = true;
     try {
       await fetchJson(`/action/${path}`, { method: 'POST' }, { timeoutMs: 15000 });
       if (path === 'pause') {
+        isPaused = true;
+        updatePauseToggleButton();
         setStatus(messages.statusPaused);
       } else if (path === 'resume') {
+        isPaused = false;
+        updatePauseToggleButton();
         setStatus(messages.statusRunning);
       }
     } catch (err) {
@@ -392,11 +425,11 @@
   }
 
   function bindActions() {
-    const pause = qs('btn-pause');
-    const resume = qs('btn-resume');
+    const pauseToggle = qs('btn-toggle-pause');
     const snapshot = qs('btn-snapshot');
-    if (pause) pause.addEventListener('click', () => sendAction('pause'));
-    if (resume) resume.addEventListener('click', () => sendAction('resume'));
+    if (pauseToggle) {
+      pauseToggle.addEventListener('click', () => sendAction(isPaused ? 'resume' : 'pause'));
+    }
     if (snapshot) snapshot.addEventListener('click', () => sendAction('snapshot'));
   }
 
