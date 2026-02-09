@@ -87,7 +87,7 @@
   {% for item in items %}
   <div class="gallery-card" data-index="{{ loop.index0 }}" data-ts="{{ item.ts }}" data-name="{{ item.name }}">
     <button class="gallery-thumb" type="button" data-full="/pictures/{{ item.name }}" aria-label="{{ item.name }}">
-      <img src="/pictures/{{ item.name }}" alt="{{ item.name }}" loading="lazy">
+      <img src="/thumbs/{{ item.name }}" alt="{{ item.name }}" loading="lazy" decoding="async">
     </button>
     <span class="gallery-badge gallery-badge-start">{{ tr.get('gallery_range_start', 'Start') if tr else 'Start'
       }}</span>

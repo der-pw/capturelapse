@@ -5,6 +5,7 @@ from pathlib import Path
 import shutil
 from app.logger_utils import log
 from app.config_manager import resolve_save_dir
+from app.thumbnails import ensure_thumbnail
 
 
 def _build_auth(cfg):
@@ -49,6 +50,7 @@ def take_snapshot(cfg):
         # Write file to disk
         with open(filepath, "wb") as f:
             f.write(resp.content)
+        ensure_thumbnail(filepath)
 
         log("info", f"Snapshot saved: {filename}")
 

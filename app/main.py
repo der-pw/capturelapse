@@ -33,6 +33,7 @@ from app import i18n
 from app.broadcast_manager import add_client, remove_client, broadcast, set_main_loop
 from app.logger_utils import log
 from app.downloader import take_snapshot, check_camera_health
+from app.thumbnails import ensure_thumbnail, delete_thumbnail_for
 from app.sunrise_utils import get_sun_times
 from app.runtime_state import (
     set_camera_error,
@@ -741,6 +742,19 @@ async def serve_picture(filename: str):
     return FileResponse(file_path)
 
 
+@app.get("/thumbs/{filename}")
+async def serve_thumbnail(filename: str):
+    async with cfg_lock:
+        local_cfg = cfg
+    save_dir = resolve_save_dir(getattr(local_cfg, "save_path", None))
+    source_path = _resolve_gallery_file(save_dir, filename)
+    thumb_path = ensure_thumbnail(source_path)
+    cache_headers = {"Cache-Control": "public, max-age=604800, immutable"}
+    if thumb_path and thumb_path.exists():
+        return FileResponse(thumb_path, headers=cache_headers)
+    return FileResponse(source_path, headers=cache_headers)
+
+
 @app.delete("/pictures/{filename}")
 async def delete_picture(filename: str):
     async with cfg_lock:
@@ -762,6 +776,7 @@ async def delete_picture(filename: str):
         file_path.unlink()
     except Exception:
         raise HTTPException(status_code=500, detail="delete_failed")
+    delete_thumbnail_for(file_path)
     return {"ok": True}
 
 
@@ -832,6 +847,7 @@ async def delete_gallery_range(payload: dict = Body(...)):
     for path in items:
         try:
             path.unlink()
+            delete_thumbnail_for(path)
             deleted += 1
         except Exception:
             failed += 1
