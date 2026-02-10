@@ -2,6 +2,10 @@
 
 All notable user-visible changes are documented here.
 
+## 0.9.20-beta - 2026-02-10
+- Camera fetching: improved resilience for unstable camera endpoints with retry-based GET handling and `Connection: close` request headers.
+- Camera errors: normalized transport error text for dropped remote connections (e.g. `RemoteDisconnected`) to avoid noisy raw exception tuples in status output.
+
 ## 0.9.19-beta - 2026-02-09
 - Gallery timelapse list: video names are now clickable and open an inline preview player directly inside the same modal.
 - Gallery timelapse list: removed the extra preview modal to avoid stacked modal transitions.
