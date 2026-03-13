@@ -83,7 +83,7 @@
 </div>
 
 {% if items %}
-<div class="gallery-grid">
+<div id="gallery-grid" class="gallery-grid">
   {% for item in items %}
   <div class="gallery-card" data-index="{{ loop.index0 }}" data-ts="{{ item.ts }}" data-name="{{ item.name }}">
     <button class="gallery-thumb" type="button" data-full="/pictures/{{ item.name }}" aria-label="{{ item.name }}">
@@ -127,7 +127,8 @@
   <img id="gallery-lightbox-img" alt="">
   <div id="gallery-lightbox-caption" class="gallery-lightbox-caption"></div>
 </div>
-<div class="gallery-pagination mt-4 d-flex flex-wrap gap-2 justify-content-center align-items-center">
+<div id="gallery-pagination" class="gallery-pagination mt-4 d-flex flex-wrap gap-2 justify-content-center align-items-center"
+  data-current-page="{{ filters.page }}" data-total-pages="{{ filters.total_pages }}">
   {% set current_page = filters.page %}
   {% set total_pages = filters.total_pages %}
   {% set prev_page = current_page - 1 %}
@@ -175,7 +176,7 @@
       </a>
 </div>
 {% else %}
-<div class="text-muted">{{ tr.get('gallery_empty', 'No images found for the selected filters.') if tr else 'No images
+<div id="gallery-empty-state" class="text-muted">{{ tr.get('gallery_empty', 'No images found for the selected filters.') if tr else 'No images
   found for the selected filters.' }}</div>
 {% endif %}
 
@@ -542,6 +543,7 @@
             }
           }
         }
+        syncGalleryAfterRemoval(1);
         if (window.CaptureLapse && window.CaptureLapse.showAlert) {
           window.CaptureLapse.showAlert(statusTarget, {
             message: '{{ tr.get("gallery_delete_success", "Image deleted.") if tr else "Image deleted." }}',
@@ -564,9 +566,13 @@
       }
     });
 
-    const cards = Array.from(document.querySelectorAll('.gallery-card'));
+    function getRangeCards() {
+      return Array.from(document.querySelectorAll('.gallery-card'));
+    }
     const selectionBox = document.getElementById('gallery-selection');
     const totalCountBox = document.getElementById('gallery-total-count');
+    const galleryGrid = document.getElementById('gallery-grid');
+    const paginationEl = document.getElementById('gallery-pagination');
     const startLabel = selectionBox ? selectionBox.dataset.startLabel : 'Start';
     const endLabel = selectionBox ? selectionBox.dataset.endLabel : 'End';
     const emptyText = selectionBox ? selectionBox.dataset.emptyText : '';
@@ -584,6 +590,7 @@
     const deleteSelectedSuccess = '{{ tr.get("gallery_delete_selected_success", "Selected images deleted.") if tr else "Selected images deleted." }}';
     const deleteSelectedFailed = '{{ tr.get("gallery_delete_selected_failed", "Failed to delete selected images.") if tr else "Failed to delete selected images." }}';
     const deleteSelectedEmpty = '{{ tr.get("gallery_delete_selected_empty", "No images selected.") if tr else "No images selected." }}';
+    const galleryEmptyText = '{{ tr.get("gallery_empty", "No images found for the selected filters.") if tr else "No images found for the selected filters." }}';
     let selectedCountToken = 0;
 
     function loadRange() {
@@ -650,7 +657,74 @@
       selectedCountEl.dataset.selected = String(Math.max(0, count));
     }
 
+    function setTotalCount(nextCount) {
+      if (!totalCountBox) return;
+      totalCountBox.dataset.count = String(nextCount);
+      const valueEl = totalCountBox.querySelector('.value');
+      if (valueEl) valueEl.textContent = String(nextCount);
+      if (selectionBox) {
+        selectionBox.dataset.totalItems = String(nextCount);
+      }
+    }
+
+    function ensureEmptyState() {
+      if (document.getElementById('gallery-empty-state')) return;
+      const emptyState = document.createElement('div');
+      emptyState.id = 'gallery-empty-state';
+      emptyState.className = 'text-muted';
+      emptyState.textContent = galleryEmptyText;
+      const toolbar = document.querySelector('.gallery-toolbar');
+      if (toolbar) {
+        toolbar.insertAdjacentElement('afterend', emptyState);
+      }
+    }
+
+    function clearRangeAllState() {
+      if (!selectionBox) return;
+      selectionBox.dataset.allStart = '';
+      selectionBox.dataset.allEnd = '';
+      selectionBox.dataset.allStartTs = '';
+      selectionBox.dataset.allEndTs = '';
+    }
+
+    function goToPage(page) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('page', String(page));
+      window.location.assign(url.toString());
+    }
+
+    function syncGalleryAfterRemoval(deletedCount) {
+      const currentCount = totalCountBox ? Number(totalCountBox.dataset.count || '') : NaN;
+      const nextCount = Number.isFinite(currentCount) ? Math.max(0, currentCount - deletedCount) : null;
+      if (nextCount !== null) {
+        setTotalCount(nextCount);
+      }
+
+      const remainingCards = getGalleryCards();
+      if (remainingCards.length > 0) {
+        const emptyState = document.getElementById('gallery-empty-state');
+        if (emptyState) emptyState.remove();
+        return;
+      }
+
+      if (galleryGrid) galleryGrid.remove();
+      if (paginationEl) paginationEl.remove();
+
+      if (nextCount !== null && nextCount > 0) {
+        const currentPage = Number(paginationEl ? paginationEl.dataset.currentPage || '' : '');
+        if (Number.isFinite(currentPage) && currentPage > 1) {
+          goToPage(currentPage - 1);
+          return;
+        }
+      }
+
+      ensureEmptyState();
+      clearRangeAllState();
+      if (selectAllBtn) selectAllBtn.disabled = true;
+    }
+
     function updateRangeUI(range) {
+      const cards = getRangeCards();
       cards.forEach((card) => {
         card.classList.remove('is-selected', 'is-start', 'is-end');
       });
@@ -790,7 +864,7 @@
     }
     if (deleteSelectedBtn) {
       deleteSelectedBtn.addEventListener('click', async () => {
-        const selectedCards = cards.filter((card) => card.classList.contains('is-selected'));
+        const selectedCards = getRangeCards().filter((card) => card.classList.contains('is-selected'));
         const selectedName = range.start || range.end;
         if (!selectedName) {
           showStatus(deleteSelectedEmpty, 'warning');
@@ -847,15 +921,7 @@
         }
         if (!failed) {
           selectedCards.forEach((card) => card.remove());
-          if (totalCountBox) {
-            const currentCount = Number(totalCountBox.dataset.count || '');
-            if (Number.isFinite(currentCount)) {
-              const nextCount = Math.max(0, currentCount - deletedCount);
-              totalCountBox.dataset.count = String(nextCount);
-              const valueEl = totalCountBox.querySelector('.value');
-              if (valueEl) valueEl.textContent = String(nextCount);
-            }
-          }
+          syncGalleryAfterRemoval(deletedCount);
         }
         range = { start: null, end: null, start_ts: null, end_ts: null };
         saveRange(range);

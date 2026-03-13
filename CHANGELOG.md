@@ -2,6 +2,11 @@
 
 All notable user-visible changes are documented here.
 
+## 0.9.21-beta - 2026-03-13
+- Gallery: pagination now updates correctly after deleting images from the current page.
+- Gallery: deleting the last remaining images now removes stale pagination controls and shows the empty state immediately.
+- Gallery: when a page becomes empty but earlier pages still contain images, the view now navigates back to the previous page.
+
 ## 0.9.20-beta - 2026-02-10
 - Camera fetching: improved resilience for unstable camera endpoints with retry-based GET handling and `Connection: close` request headers.
 - Camera errors: normalized transport error text for dropped remote connections (e.g. `RemoteDisconnected`) to avoid noisy raw exception tuples in status output.
