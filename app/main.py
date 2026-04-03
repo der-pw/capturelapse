@@ -58,7 +58,7 @@ app.mount(
 )
 
 # === Templates ===
-APP_VERSION = "0.9.22-beta"
+APP_VERSION = "0.9.23-beta"
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 templates.env.globals["app_version"] = APP_VERSION
 IMAGE_STATS_TTL_SECONDS = 60
@@ -376,6 +376,7 @@ async def login_page(request: Request):
         local_cfg = cfg
     tr = i18n.load_translations(getattr(local_cfg, "language", "de"))
     return templates.TemplateResponse(
+        request,
         "login.html",
         {
             "request": request,
@@ -404,6 +405,7 @@ async def login_submit(request: Request, ACCESS_PASSWORD: str = Form("")):
 
     if blocked:
         return templates.TemplateResponse(
+            request,
             "login.html",
             {
                 "request": request,
@@ -436,6 +438,7 @@ async def login_submit(request: Request, ACCESS_PASSWORD: str = Form("")):
     _register_failure(ip)
     blocked, remaining = _is_blocked(ip)
     return templates.TemplateResponse(
+        request,
         "login.html",
         {
             "request": request,
@@ -471,6 +474,7 @@ async def index(request: Request):
 
     tr = i18n.load_translations(getattr(local_cfg, "language", "de"))
     return templates.TemplateResponse(
+        request,
         "index.html",
         {
             "request": request,
@@ -494,6 +498,7 @@ async def settings_page(request: Request):
     if request.query_params.get("saved"):
         message = tr.get("settings_saved", "Einstellungen gespeichert")
     return templates.TemplateResponse(
+        request,
         "settings.html",
         {
             "request": request,
@@ -710,6 +715,7 @@ async def gallery_page(
 
     tr = i18n.load_translations(getattr(local_cfg, "language", "de"))
     return templates.TemplateResponse(
+        request,
         "gallery.html",
         {
             "request": request,
