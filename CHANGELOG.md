@@ -2,6 +2,12 @@
 
 All notable user-visible changes are documented here.
 
+## 0.9.23-beta - 2026-04-03
+- Runtime compatibility: updated template rendering calls for current FastAPI/Starlette behavior so pages render correctly after dependency upgrades.
+- App lifecycle: replaced deprecated startup/shutdown event hooks with FastAPI `lifespan`.
+- Dependencies: pinned core framework packages in `requirements.txt` to keep rebuilds deterministic.
+- Gallery: deleting all images on the current page now redirects to the correct remaining page instead of leaving stale pagination state.
+
 ## 0.9.21-beta - 2026-03-13
 - Gallery: pagination now updates correctly after deleting images from the current page.
 - Gallery: deleting the last remaining images now removes stale pagination controls and shows the empty state immediately.

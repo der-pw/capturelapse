@@ -8,6 +8,7 @@ import asyncio
 import json
 from datetime import datetime
 from zoneinfo import ZoneInfo
+from contextlib import asynccontextmanager
 import os
 import secrets
 from time import monotonic, time
@@ -47,8 +48,23 @@ from app.runtime_state import (
 )
 from starlette.middleware.sessions import SessionMiddleware
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    log("info", "Starting CaptureLapse ...")
+    try:
+        set_main_loop(asyncio.get_running_loop())
+    except RuntimeError:
+        pass
+    start_scheduler()
+    try:
+        yield
+    finally:
+        log("info", "Stopping CaptureLapse ...")
+        stop_scheduler()
+
+
 # === FastAPI App ===
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 # === Static Mount (CSS, JS, images) ===
 app.mount(
@@ -1240,19 +1256,3 @@ async def action_snapshot():
         })
         return {"ok": False}
 
-
-# === App lifecycle ===
-@app.on_event("startup")
-async def startup_event():
-    log("info", "Starting CaptureLapse ...")
-    try:
-        set_main_loop(asyncio.get_running_loop())
-    except RuntimeError:
-        pass
-    start_scheduler()
-
-
-@app.on_event("shutdown")
-def shutdown_event():
-    log("info", "Stopping CaptureLapse ...")
-    stop_scheduler()

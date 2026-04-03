@@ -64,6 +64,8 @@ Tip: Setting `Start Time` and `End Time` to the same time (e.g. `00:00` to `00:0
   - Windows PowerShell: `py -3 -m venv .venv && .venv\\Scripts\\Activate.ps1`
   - macOS/Linux: `python3 -m venv .venv && source .venv/bin/activate`
 - Install dependencies: `python -m pip install -r requirements.txt`
+- Dependency policy: core framework packages are pinned in `requirements.txt` so FastAPI, Starlette, Jinja2, and Pydantic stay compatible across rebuilds.
+- After changing dependencies in Docker, rebuild the image instead of only restarting the container.
 
 ## Run (API + Web UI)
 - Development (auto-reload): `uvicorn app.main:app --reload --port 8000`
@@ -92,6 +94,11 @@ Tip: Setting `Start Time` and `End Time` to the same time (e.g. `00:00` to `00:0
 - Timelapse/global status in the navbar uses `/status` as the single source of truth; `/timelapse/status` remains for API compatibility.
 - Shared helpers for fetch + alerts live in `app/static/js/app.js`, while page-specific logic is in `dashboard.js` and `settings.js`.
   - After saving, the settings page reloads after a short delay so language changes apply immediately.
+
+### Framework compatibility
+- Current template rendering uses the request-first Starlette form: `TemplateResponse(request, "template.html", context)`.
+- Application startup and shutdown use FastAPI `lifespan` instead of deprecated `@app.on_event(...)` hooks.
+- After framework upgrades, verify `/`, `/settings`, and `/gallery` before promoting the build.
 
 ## Configuration
 - File: `app/data/config.json` (local), `/data/config.json` (Docker)
