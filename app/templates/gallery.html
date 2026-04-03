@@ -693,6 +693,20 @@
       window.location.assign(url.toString());
     }
 
+    function getGalleryLimit() {
+      const url = new URL(window.location.href);
+      const rawLimit = Number(url.searchParams.get('limit') || '');
+      if (Number.isFinite(rawLimit) && rawLimit > 0) {
+        return rawLimit;
+      }
+      const limitInput = document.querySelector('select[name="limit"]');
+      const inputLimit = limitInput ? Number(limitInput.value || '') : NaN;
+      if (Number.isFinite(inputLimit) && inputLimit > 0) {
+        return inputLimit;
+      }
+      return 200;
+    }
+
     function syncGalleryAfterRemoval(deletedCount) {
       const currentCount = totalCountBox ? Number(totalCountBox.dataset.count || '') : NaN;
       const nextCount = Number.isFinite(currentCount) ? Math.max(0, currentCount - deletedCount) : null;
@@ -712,8 +726,10 @@
 
       if (nextCount !== null && nextCount > 0) {
         const currentPage = Number(paginationEl ? paginationEl.dataset.currentPage || '' : '');
-        if (Number.isFinite(currentPage) && currentPage > 1) {
-          goToPage(currentPage - 1);
+        const limit = getGalleryLimit();
+        const totalPagesAfterRemoval = Math.max(1, Math.ceil(nextCount / limit));
+        if (Number.isFinite(currentPage) && currentPage >= 1) {
+          goToPage(Math.min(currentPage, totalPagesAfterRemoval));
           return;
         }
       }
