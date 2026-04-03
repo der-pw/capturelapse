@@ -74,7 +74,7 @@ app.mount(
 )
 
 # === Templates ===
-APP_VERSION = "0.9.23-beta"
+APP_VERSION = "0.9.23-beta2"
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 templates.env.globals["app_version"] = APP_VERSION
 IMAGE_STATS_TTL_SECONDS = 60
